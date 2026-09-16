@@ -1,7 +1,6 @@
 ---
 name: deps
 description: Add, audit, or upgrade Python dependencies with uv - resolver-chosen versions, changelog check before upgrades, vulnerability scan. Use for any "add/update/upgrade this package" request, or when something may be outdated.
-disable-model-invocation: true
 argument-hint: "add <pkg> | audit | upgrade [pkg]"
 ---
 
