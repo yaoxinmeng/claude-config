@@ -8,6 +8,7 @@ Shared Claude Code configuration: global instructions, skills, and agents. This 
 |---|---|---|
 | `home/` | `~/.claude/` | Global `CLAUDE.md`, skills and agents used in every project |
 | `python/<tool>/` | `<project>/.claude/` | Skills that only make sense in a Python project, one directory per package manager: `uv`, `pip`, `poetry` |
+| `node/npm/` | `<project>/.claude/` | Skills that only make sense in a Node project using `npm` |
 
 ## Setup
 
@@ -25,7 +26,7 @@ Shared Claude Code configuration: global instructions, skills, and agents. This 
 3. Restart Claude Code. `/init-project` and `/deps` should appear in the slash-command list and the agents under the Agent tool.
 4. After editing anything here, re-run step 1. Nothing syncs automatically.
 
-Language-specific skills (`python/`) are copied into the project instead. Pick the directory matching the project's package manager and copy its `skills/` into `<project>/.claude/`:
+Language-specific skills (`python/`, `node/`) are copied into the project instead. Pick the directory matching the project's package manager and copy its `skills/` into `<project>/.claude/`:
 
 ```powershell
 Copy-Item -Recurse -Force python\uv\skills <project>\.claude\
@@ -35,7 +36,7 @@ Copy-Item -Recurse -Force python\uv\skills <project>\.claude\
 cp -r python/uv/skills <project>/.claude/
 ```
 
-Replace `uv` with `pip` or `poetry` as needed. Copy exactly one: all three define a `/deps` skill, so the last one copied would win.
+Replace `python/uv` with `python/pip`, `python/poetry`, or `node/npm` as needed. Copy exactly one: every variant defines a `/deps` skill, so the last one copied would win.
 
 ## What is in `home/`
 
@@ -62,9 +63,9 @@ All agents are read-only except `docs-writer`. Claude picks them from their desc
 | `docs-writer` | sonnet | The only agent that edits files, and only `README.md` and `docs/`. Keeps `docs/spec/` current, writes how-tos, explanations, and ADRs. Runs every snippet before writing it. |
 | `docs-researcher` | haiku | Answers "how do I call this API at the version this project has installed". Checks `uv.lock` / `npm ls` first, then Context7, then official docs. Returns version, snippet, gotchas, source. |
 
-## What is in `python/`
+## What is in `python/` and `node/`
 
-Each of `python/uv/`, `python/pip/`, and `python/poetry/` holds the same `deps` skill written for that package manager. The commands differ; the rules do not.
+Each of `python/uv/`, `python/pip/`, `python/poetry/`, and `node/npm/` holds the same `deps` skill written for that package manager. The commands differ; the rules do not.
 
 | Skill | Invoke | What it does |
 |---|---|---|
@@ -75,8 +76,9 @@ Each of `python/uv/`, `python/pip/`, and `python/poetry/` holds the same `deps` 
 | `uv` | `pyproject.toml` + `uv.lock` | `uv add`, `uv tree --outdated`, `uv lock --upgrade-package` |
 | `poetry` | `pyproject.toml` + `poetry.lock` | `poetry add`, `poetry show --outdated`, `poetry update` |
 | `pip` | `requirements.txt` (+ `requirements-dev.txt`) | No lockfile, so the skill pins the version `pip show` reports after each install. Uses whatever requirements files the repo already has. |
+| `npm` | `package.json` + `package-lock.json` | `npm install`, `npm outdated`, `npm update` / `npm install <pkg>@latest`; upgrades a matching `@types/` package in the same step. Never runs `npm audit fix --force`. |
 
-All three run `pip-audit` for vulnerabilities. It is installed into the environment as a tool, never added as a dependency.
+The Python variants run `pip-audit` for vulnerabilities, installed into the environment as a tool and never added as a dependency. The npm variant uses the built-in `npm audit`.
 
 ## Greenfield project
 
@@ -91,6 +93,6 @@ All three run `pip-audit` for vulnerabilities. It is installed into the environm
 
 1. `cd` into the existing repo. If it already has a `CLAUDE.md`, keep it; `init-project` only adds or replaces the `## Project spec` section.
 2. Run `/init-project <one-line description>`. It reads the README, manifests, entry points, and data models first and only asks about what the code does not answer. Where the code and your answer disagree, it reports the gap rather than papering over it.
-3. Copy the language skills into the project as in the greenfield steps, choosing `uv`, `pip`, or `poetry` to match what the repo already uses (`uv.lock`, `requirements.txt`, or `poetry.lock`).
+3. Copy the language skills into the project as in the greenfield steps, choosing the variant that matches what the repo already uses (`uv.lock`, `requirements.txt`, `poetry.lock`, or `package-lock.json`).
 4. Run `/deps audit` for a first picture of outdated or vulnerable dependencies. Plan majors separately; do security fixes first.
 5. Before the first non-trivial change, ask for the `code-reviewer` and `security-reviewer` agents on the diff so their project memory starts with the repo's existing conventions.
