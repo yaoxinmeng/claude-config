@@ -42,13 +42,14 @@ Replace `python/uv` with `python/pip`, `python/poetry`, or `node/npm` as needed.
 
 ### `CLAUDE.md`
 
-Global rules for every session: no em dashes, no agent co-author lines, favour quality over development cost, reproduce bugs end-to-end before fixing, fix any lint or test failure you see, and load the `concise` skill before replying.
+Global rules for every session: no em dashes, no agent co-author lines, favour quality over development cost, reproduce bugs end-to-end before fixing, fix any lint or test failure you see, load the `concise` skill before replying, and load the `write-code` skill before writing code.
 
 ### Skills
 
 | Skill | Invoke | What it does |
 |---|---|---|
 | `concise` | Loaded automatically by `CLAUDE.md` | Rules for every reply: lead with the answer, gloss jargon on first use, keep task reports to a paragraph plus bullets, and make every `AskUserQuestion` option concrete and tweakable. |
+| `write-code` | Loaded automatically by `CLAUDE.md` before any code is written | Coding standards in six steps: find existing code and the right file location first, DRY with judgement, readable names and small functions, abstractions only with two real uses, validate at the boundary and test every behaviour, then lint, re-read the diff, and ask `simplifier` when the diff outgrows the problem. |
 | `init-project` | `/init-project <one-line description>` (user only) | Requirements interview in five rounds (product, architecture, design, stack, infrastructure), then writes `docs/spec/*.md`, ADRs under `docs/decisions/`, and a `## Project spec` section in the project `CLAUDE.md` so future sessions find the spec. Never writes code. |
 
 ### Agents
