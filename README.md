@@ -8,6 +8,7 @@ Shared Claude Code configuration: global instructions, skills, and agents. This 
 |---|---|---|
 | `home/` | `~/.claude/` | Global `CLAUDE.md`, skills and agents used in every project |
 | `python/<tool>/` | `<project>/.claude/` | Skills that only make sense in a Python project, one directory per package manager: `uv`, `pip`, `poetry` |
+| `python/agents/` | `<project>/.claude/agents/` | Agents for any Python project, whatever the package manager |
 | `node/npm/` | `<project>/.claude/` | Skills that only make sense in a Node project using `npm` |
 
 ## Setup
@@ -38,6 +39,16 @@ cp -r python/uv/skills <project>/.claude/
 
 Replace `python/uv` with `python/pip`, `python/poetry`, or `node/npm` as needed. Copy exactly one: every variant defines a `/deps` skill, so the last one copied would win.
 
+Python projects also get the shared agents, regardless of package manager:
+
+```powershell
+Copy-Item -Recurse -Force python\agents <project>\.claude\
+```
+
+```sh
+cp -r python/agents <project>/.claude/
+```
+
 ## What is in `home/`
 
 ### `CLAUDE.md`
@@ -66,6 +77,8 @@ All agents are read-only except `docs-writer`. Claude picks them from their desc
 
 ## What is in `python/` and `node/`
 
+### Skills
+
 Each of `python/uv/`, `python/pip/`, `python/poetry/`, and `node/npm/` holds the same `deps` skill written for that package manager. The commands differ; the rules do not.
 
 | Skill | Invoke | What it does |
@@ -83,12 +96,18 @@ Every variant refuses versions released less than 7 days ago, so a hijacked rele
 
 The Python variants run `pip-audit` for vulnerabilities, installed into the environment as a tool and never added as a dependency. The npm variant uses the built-in `npm audit`.
 
+### Agents
+
+| Agent | Model | What it does |
+|---|---|---|
+| `test-writer` | opus | Writes pytest unit tests for new or untested code, editing only the test directory. Picks the runner from the lockfile (`uv run pytest`, `poetry run pytest`, or plain `pytest`), reuses existing `conftest.py` fixtures, tests through the public interface only, mocks only at boundaries, and leaves a failing test in place when it finds a bug rather than weakening the assertion. Preloads `write-code` and the project's `testing` skill if defined. |
+
 ## Greenfield project
 
 1. Create the repo and `cd` into it.
 2. Run `/init-project <one-line description>`. Answer the interview; say "you decide" for anything you do not care about and it is recorded in `docs/spec/assumptions.md`. Stop early if you must; unresolved items go to `docs/spec/open-questions.md`.
 3. Confirm the final summary. The skill writes `docs/spec/`, `docs/decisions/`, and a `CLAUDE.md` pointing at them, then asks whether to commit.
-4. Copy the language skills for your package manager into the project, for example `cp -r python/uv/skills <project>/.claude/` (see Setup).
+4. Copy the language skills for your package manager into the project, for example `cp -r python/uv/skills <project>/.claude/`, plus `python/agents` for a Python project (see Setup).
 5. Optionally add project skills named `python-backend`, `nextjs-frontend`, `aws-cdk`, or `testing` under `<project>/.claude/skills/`; `code-reviewer` treats violations of those as SHOULD-FIX.
 6. Build from the spec. When a design changes, update the spec file in the same commit; `docs-writer` can do this.
 
@@ -96,6 +115,6 @@ The Python variants run `pip-audit` for vulnerabilities, installed into the envi
 
 1. `cd` into the existing repo. If it already has a `CLAUDE.md`, keep it; `init-project` only adds or replaces the `## Project spec` section.
 2. Run `/init-project <one-line description>`. It reads the README, manifests, entry points, and data models first and only asks about what the code does not answer. Where the code and your answer disagree, it reports the gap rather than papering over it.
-3. Copy the language skills into the project as in the greenfield steps, choosing the variant that matches what the repo already uses (`uv.lock`, `requirements.txt`, `poetry.lock`, or `package-lock.json`).
+3. Copy the language skills and agents into the project as in the greenfield steps, choosing the variant that matches what the repo already uses (`uv.lock`, `requirements.txt`, `poetry.lock`, or `package-lock.json`).
 4. Run `/deps audit` for a first picture of outdated or vulnerable dependencies. Plan majors separately; do security fixes first.
 5. Before the first non-trivial change, ask for the `code-reviewer` and `security-reviewer` agents on the diff so their project memory starts with the repo's existing conventions.
