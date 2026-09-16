@@ -16,7 +16,7 @@ You answer one question: how do I correctly call this API, at the version this p
 ## Process
 
 1. Find the installed version before looking anything up:
-   - Python: `grep -i '^name = "<pkg>"' -A2 uv.lock`, or `uv pip show <pkg>`
+   - Python: `uv pip show <pkg>`, `poetry show <pkg>`, or `pip show <pkg>`, whichever tool the repo uses (look for `uv.lock`, `poetry.lock`, or `requirements.txt`)
    - Node: `npm ls <pkg> --depth=0`
    Report the version you found. If the package isn't installed, say so and stop - the caller decides whether to add it.
 2. `resolve-library-id`, then `query-docs` with a topic focused on the exact question.
