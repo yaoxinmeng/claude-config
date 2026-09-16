@@ -9,6 +9,18 @@ Dependency work for $ARGUMENTS. Pick the mode from the first word.
 All changes go through `poetry` so `pyproject.toml` and `poetry.lock` stay consistent.
 **Never write a version number from memory in any mode.** The resolver picks versions; you report what it picked. Never edit `pyproject.toml` or `poetry.lock` by hand for dependency changes.
 
+## Release age
+
+Never install a version released less than 7 days ago. Compromised packages are usually caught within days of publishing, so waiting keeps a hijacked release out of this repo.
+
+Poetry has no date filter, so check by hand after every `poetry add` or `poetry update` below:
+
+1. `poetry show <pkg>` for the version the resolver picked.
+2. `curl -s https://pypi.org/pypi/<pkg>/json` and read `releases["<version>"][0].upload_time`.
+3. If that is less than 7 days ago, find the newest release in `releases` that is at least 7 days old and pin it: `poetry add "<pkg>@<that version>"` (same `--group` / `--optional` flags as before). Say so in the report and name the version that was skipped, so the pin can be loosened on the next upgrade.
+
+This only covers the package you asked for. Transitive dependencies are not checked; mention that in the report when the package pulls in new ones.
+
 ## add
 
 1. Check it isn't already available: `poetry show | grep -i <pkg>`, and grep the code for an existing helper or stdlib module that does the job. Say so if it's already covered.
@@ -17,7 +29,7 @@ All changes go through `poetry` so `pyproject.toml` and `poetry.lock` stay consi
    - Runtime: `poetry add <pkg>`
    - Dev-only tools (linters, test runners): `poetry add --group dev <pkg>`
    - Optional feature: `poetry add --optional <extra> <pkg>`
-4. Report the resolved version from `poetry show <pkg>`, then ask docs-researcher for the current API at that version before writing any code against it.
+4. Apply the Release age check. Report the resolved version from `poetry show <pkg>`, then ask docs-researcher for the current API at that version before writing any code against it.
 
 ## audit
 
@@ -40,6 +52,7 @@ One package at a time, or one coherent group. Never all at once.
 4. Upgrade:
    - Within the existing constraint: `poetry update <pkg>`
    - Past the constraint (major bump): `poetry add <pkg>@latest` to re-resolve and rewrite the constraint
+   Then apply the Release age check.
 5. Fix call sites, then run the full check suite (lint, type check, tests).
 6. Report: old -> new version, files changed, and anything you couldn't verify.
 

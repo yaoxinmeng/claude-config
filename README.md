@@ -78,6 +78,8 @@ Each of `python/uv/`, `python/pip/`, `python/poetry/`, and `node/npm/` holds the
 | `pip` | `requirements.txt` (+ `requirements-dev.txt`) | No lockfile, so the skill pins the version `pip show` reports after each install. Uses whatever requirements files the repo already has. |
 | `npm` | `package.json` + `package-lock.json` | `npm install`, `npm outdated`, `npm update` / `npm install <pkg>@latest`; upgrades a matching `@types/` package in the same step. Never runs `npm audit fix --force`. |
 
+Every variant refuses versions released less than 7 days ago, so a hijacked release has time to be caught before it lands in a project. `uv` (`--exclude-newer`) and `npm` (`--before`) enforce this natively, transitive dependencies included; `pip` and `poetry` check the direct package against PyPI's release dates and pin the newest old-enough version instead.
+
 The Python variants run `pip-audit` for vulnerabilities, installed into the environment as a tool and never added as a dependency. The npm variant uses the built-in `npm audit`.
 
 ## Greenfield project
