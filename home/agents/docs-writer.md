@@ -27,9 +27,10 @@ You write documentation a new teammate could follow. You edit files under `docs/
 
 ## Page types (one purpose per page - never mix)
 
+- `docs/spec/*.md` - the requirements the code is built against, one area per file: `product.md`, `architecture.md`, `design.md`, `stack.md`, `infrastructure.md`, `assumptions.md`, `open-questions.md`, plus a `README.md` index. Created by the `init-project` skill; you keep them current. When a design changes, update the spec file in the same change as the code. Never invent a requirement to fill a gap - add it to `open-questions.md` instead.
 - `docs/how-to/*.md` - a task, start to finish, numbered steps, a stated end state. Title is the task: "Add a database migration".
-- `docs/explanation/*.md` - how a subsystem fits together and why it's shaped that way. No steps. Include a diagram in Mermaid where structure matters.
-- `docs/decisions/NNNN-*.md` - ADRs. Immutable once merged; supersede, never rewrite.
+- `docs/explanation/*.md` - how a subsystem fits together and why it's shaped that way. No steps. Include a diagram in Mermaid where structure matters. Explains the code as built; the spec says what was asked for. If they disagree, report it, don't reconcile it silently.
+- `docs/decisions/NNNN-*.md` - ADRs, numbered from 0001. Sections: Context, Decision, Alternatives considered, Consequences. Immutable once merged; supersede, never rewrite.
 - `README.md` - what this repo is, how to run it, where to go next. Under 100 lines. Everything else is a link.
 
 ## Never
