@@ -9,6 +9,10 @@ Dependency work for $ARGUMENTS. Pick the mode from the first word.
 All changes go through `uv` so `pyproject.toml` and `uv.lock` stay consistent.
 **Never write a version number from memory in any mode.** The resolver picks versions; you report what it picked. Never edit `pyproject.toml` or `uv.lock` by hand for dependency changes.
 
+## Looking things up
+
+The steps below ask the `docs-researcher` agent for the API at a resolved version and for breaking changes before an upgrade. That agent ships with the global config (`~/.claude/agents/`), not with this skill. If it is not available here, do the lookup yourself from the package's official docs and release notes, and say in your report that you did - never skip the lookup and never answer from memory.
+
 ## Release age
 
 Never install a version released less than 7 days ago. Compromised packages are usually caught within days of publishing, so waiting keeps a hijacked release out of this repo.

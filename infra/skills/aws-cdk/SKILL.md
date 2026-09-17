@@ -9,7 +9,7 @@ CDK code is code that creates real infrastructure and real bills. Follow `write-
 
 - Read `cdk.json` for the app entry point, context, and feature flags. Never change a feature flag to make an error go away: flags change the generated template and can replace live resources.
 - Read the existing stacks and constructs in full. Reuse a construct that already exists here before writing a new one, and copy this app's naming, props, and tagging conventions.
-- Check the installed version (`npm ls aws-cdk-lib aws-cdk`) and ask `docs-researcher` for the API at that version. Never write a construct's props from memory: they move between versions.
+- Check the installed version (`npm ls aws-cdk-lib aws-cdk`) and ask the `docs-researcher` agent for the API at that version. Never write a construct's props from memory: they move between versions. That agent ships with the global config (`~/.claude/agents/`), not with this skill; if it is not available here, read the CDK API reference for that version yourself and say that you did.
 
 ## 2. App and stack layout
 

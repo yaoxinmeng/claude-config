@@ -8,6 +8,7 @@ Shared Claude Code configuration: global instructions, skills, and agents. This 
 |---|---|---|
 | `home/` | `~/.claude/` | Global `CLAUDE.md`, skills and agents used in every project |
 | `python/<tool>/` | `<project>/.claude/` | Skills that only make sense in a Python project, one directory per package manager: `uv`, `pip`, `poetry` |
+| `python/skills/` | `<project>/.claude/skills/` | Skills for any Python project, whatever the package manager |
 | `python/agents/` | `<project>/.claude/agents/` | Agents for any Python project, whatever the package manager |
 | `node/npm/` | `<project>/.claude/` | Skills that only make sense in a Node project using `npm` |
 | `infra/` | `<project>/.claude/` | Skills for projects that define cloud infrastructure, whatever the application language |
@@ -40,14 +41,14 @@ cp -r python/uv/skills <project>/.claude/
 
 Replace `python/uv` with `python/pip`, `python/poetry`, or `node/npm` as needed. Copy exactly one: every variant defines a `/deps` skill, so the last one copied would win.
 
-Python projects also get the shared agents, regardless of package manager:
+Python projects also get the shared skills and agents, regardless of package manager:
 
 ```powershell
-Copy-Item -Recurse -Force python\agents <project>\.claude\
+Copy-Item -Recurse -Force python\skills, python\agents <project>\.claude\
 ```
 
 ```sh
-cp -r python/agents <project>/.claude/
+cp -r python/skills python/agents <project>/.claude/
 ```
 
 Projects that define cloud infrastructure also get the `infra/` skills:
@@ -64,7 +65,7 @@ cp -r infra/skills <project>/.claude/
 
 ### `CLAUDE.md`
 
-Global rules for every session: no em dashes, no agent co-author lines, favour quality over development cost, reproduce bugs end-to-end before fixing, fix any lint or test failure you see, load the `concise` skill before replying, load the `write-code` skill before writing code, and load the `write-tests` skill before writing tests.
+Global rules for every session: no em dashes, no agent co-author lines, favour quality over development cost, reproduce bugs end-to-end before fixing, fix any lint or test failure you see, load the `concise` skill before replying, load the `write-code` skill before writing code, load the `write-tests` skill before writing tests, and load the `write-docs` skill before writing documentation.
 
 ### Skills
 
@@ -73,6 +74,7 @@ Global rules for every session: no em dashes, no agent co-author lines, favour q
 | `concise` | Loaded automatically by `CLAUDE.md` | Rules for every reply: lead with the answer, gloss jargon on first use, keep task reports to a paragraph plus bullets, and make every `AskUserQuestion` option concrete and tweakable. |
 | `write-code` | Loaded automatically by `CLAUDE.md` before any code is written | Coding standards in six steps: find existing code and the right file location first, DRY with judgement, readable names and small functions, abstractions only with two real uses, validate at the boundary and test every behaviour, then lint, re-read the diff, and ask `simplifier` when the diff outgrows the problem. |
 | `write-tests` | Loaded before writing or editing any test; preloaded by `test-writer` | Test standards for any language: find the runner and existing fixtures first, one behaviour per test, assertions that can actually fail, names that state the expected result, mocking only at boundaries, no sleeps or ordering between tests, and a failing test left in place when it exposes a real bug. |
+| `write-docs` | Loaded automatically by `CLAUDE.md` before any documentation is written; preloaded by `docs-writer` | House style for prose docs: lead with the answer, second person and present tense, every claim concrete, say why rather than what, no marketing words, own the caveats. Defines one purpose per page type (`docs/spec/`, `docs/how-to/`, `docs/explanation/`, `docs/decisions/`, `README.md`) and the never list: no documenting private functions, no hand-editing generated `docs/reference/`, no TODOs left in a page. |
 | `init-project` | `/init-project <one-line description>` (user only) | Requirements interview in five rounds (product, architecture, design, stack, infrastructure), then writes `docs/spec/*.md`, ADRs under `docs/decisions/`, and a `## Project spec` section in the project `CLAUDE.md` so future sessions find the spec. Never writes code. |
 
 ### Agents
@@ -84,7 +86,7 @@ All agents are read-only except `docs-writer`. Claude picks them from their desc
 | `code-reviewer` | opus | Reviews the uncommitted diff against `origin/main`. Reports BLOCKER / SHOULD-FIX / NIT as `file:line - problem - fix`, or `LGTM`. Keeps per-project memory of recurring issues. Preloads the `write-code` and `write-tests` skills. Judges tests in the diff against `write-tests`, plus the diff-only checks: behaviour changed with no test, assertions loosened instead of updated, new branches left uncovered, tests deleted while their behaviour stayed. |
 | `security-reviewer` | opus | Audits the diff for authz gaps, injection, leaked secrets, over-broad IAM, risky dependencies. Reports only what the diff introduces, ordered by severity. |
 | `simplifier` | sonnet | Finds code the diff added that can be deleted or inlined: single-use wrappers, impossible guards, orphans, tests that cannot fail. Only proposes changes that reduce line count. |
-| `docs-writer` | sonnet | The only agent that edits files, and only `README.md` and `docs/`. Keeps `docs/spec/` current, writes how-tos, explanations, and ADRs. Runs every snippet before writing it. |
+| `docs-writer` | sonnet | The only agent that edits files, and only `README.md` and `docs/`. Keeps `docs/spec/` current, writes how-tos, explanations, and ADRs. Runs every snippet before writing it. Preloads the `write-docs` skill, which holds the house style and page types; the agent itself only adds the delegation rules - establish the subject from the repo rather than the prompt, and report gaps instead of guessing. |
 | `docs-researcher` | haiku | Answers "how do I call this API at the version this project has installed". Checks `uv.lock` / `npm ls` first, then Context7, then official docs. Returns version, snippet, gotchas, source. |
 
 ## What is in `python/` and `node/`
@@ -108,11 +110,19 @@ Every variant refuses versions released less than 7 days ago, so a hijacked rele
 
 The Python variants run `pip-audit` for vulnerabilities, installed into the environment as a tool and never added as a dependency. The npm variant uses the built-in `npm audit`.
 
+Every variant asks `docs-researcher` for the API at a resolved version and for breaking changes before an upgrade. That agent lives in `home/`, so a project that only got the skills copied in does not have it; each skill says to do the lookup by hand and report that it did, rather than answering from memory. The `aws-cdk` skill depends on it the same way.
+
+`python/skills/` holds one skill that applies to any Python project, whatever the package manager:
+
+| Skill | Invoke | What it does |
+|---|---|---|
+| `write-tests-python` | Loaded before writing or editing any Python test; preloaded by `test-writer` | The pytest layer on top of `write-tests`: pick the runner from the lockfile (`uv run pytest`, `poetry run pytest`, or plain `pytest`), read `[tool.pytest.ini_options]` for markers and plugins, never add a plugin to make a test possible, reuse every `conftest.py` on the path, and the idioms - `pytest.raises(..., match=...)` over bare `Exception`, `parametrize` with `ids=`, `monkeypatch` and `tmp_path` at boundaries, fixtures that return rather than assert. |
+
 ### Agents
 
 | Agent | Model | What it does |
 |---|---|---|
-| `test-writer` | opus | Writes pytest unit tests for new or untested code, editing only the test directory. Picks the runner from the lockfile (`uv run pytest`, `poetry run pytest`, or plain `pytest`), reuses existing `conftest.py` fixtures, and adds the pytest specifics (`pytest.raises`, `parametrize`, `monkeypatch`, `tmp_path`) on top of the shared rules. Preloads `write-code` and `write-tests`. |
+| `test-writer` | opus | Writes pytest unit tests for new or untested code, editing only the test directory. Preloads `write-tests` and `write-tests-python`, which hold the standards; the agent itself only adds the delegation rules - read the code under test and its callers in full, run the suite, and report what could not be tested through the public interface. Requires `python/skills/` to be installed in the project alongside `python/agents/`. |
 
 ## What is in `infra/`
 
@@ -127,7 +137,7 @@ Skills for projects that define cloud infrastructure. Copy `infra/skills` into `
 1. Create the repo and `cd` into it.
 2. Run `/init-project <one-line description>`. Answer the interview; say "you decide" for anything you do not care about and it is recorded in `docs/spec/assumptions.md`. Stop early if you must; unresolved items go to `docs/spec/open-questions.md`.
 3. Confirm the final summary. The skill writes `docs/spec/`, `docs/decisions/`, and a `CLAUDE.md` pointing at them, then asks whether to commit.
-4. Copy the language skills for your package manager into the project, for example `cp -r python/uv/skills <project>/.claude/`, plus `python/agents` for a Python project (see Setup). Add `cp -r infra/skills <project>/.claude/` if the project defines cloud infrastructure.
+4. Copy the language skills for your package manager into the project, for example `cp -r python/uv/skills <project>/.claude/`, plus `python/skills` and `python/agents` for a Python project (see Setup). Add `cp -r infra/skills <project>/.claude/` if the project defines cloud infrastructure.
 5. Build from the spec. When a design changes, update the spec file in the same commit; `docs-writer` can do this.
 
 ## Brownfield project

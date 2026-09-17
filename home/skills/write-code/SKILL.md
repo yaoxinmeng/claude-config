@@ -5,6 +5,8 @@ description: Coding standards for any code that gets written or changed - DRY, r
 
 Write code a colleague can read in one pass and change without fear. Match the surrounding code's style, naming, and idiom before applying anything below.
 
+Sections 1-5 are the standard. They are also the criteria to judge existing code against, so load them when reviewing as well as when writing. Section 6 is the cleanup pass for whoever is actually making the change; skip it if you are only reviewing.
+
 ## 1. Look before writing
 
 - Find existing code that does the same or similar job (`grep` for the concept, not just the name). Reuse or extend it; never write a second copy.
@@ -43,4 +45,4 @@ Write code a colleague can read in one pass and change without fear. Match the s
 
 - Run the project's formatter, linter, type checker, and the relevant tests. Fix everything they report, including pre-existing failures you touched.
 - Re-read the diff as a reviewer: every added line must be needed for the task. Remove leftover debug output, dead branches, and TODOs you can resolve now.
-- If the diff is larger than the problem, or touches more than about 100 lines, ask the `simplifier` agent for what can be deleted or collapsed, and apply what it finds.
+- If the diff is larger than the problem, or touches more than about 100 lines, ask the `simplifier` agent for what can be deleted or collapsed, and apply what it finds. If you cannot spawn agents - you are one yourself - do that pass inline instead: re-read each symbol you added, grep its call sites, and delete anything with one caller that does not earn its indirection.

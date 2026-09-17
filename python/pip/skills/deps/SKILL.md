@@ -9,6 +9,10 @@ Dependency work for $ARGUMENTS. Pick the mode from the first word.
 All installs go through `pip` inside the project's virtualenv (activate it, or use `python -m pip`). pip has no lockfile, so the requirements files are the record: every runtime dependency lives in `requirements.txt`, dev tools in `requirements-dev.txt` (or whatever the repo already uses - check before creating a new file).
 **Never write a version number from memory in any mode.** pip picks the version; you copy what `pip show` reports into the requirements file. Never edit a version pin by hand for any other reason.
 
+## Looking things up
+
+The steps below ask the `docs-researcher` agent for the API at a resolved version and for breaking changes before an upgrade. That agent ships with the global config (`~/.claude/agents/`), not with this skill. If it is not available here, do the lookup yourself from the package's official docs and release notes, and say in your report that you did - never skip the lookup and never answer from memory.
+
 ## Release age
 
 Never install a version released less than 7 days ago. Compromised packages are usually caught within days of publishing, so waiting keeps a hijacked release out of this repo.
