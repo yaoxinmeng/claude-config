@@ -51,9 +51,20 @@ After round 5, reread everything recorded and run this checklist. Any "no" becom
 
 Stop when the checklist passes and the user confirms the final consolidated summary. The user may also stop early; then everything unresolved goes to `docs/spec/open-questions.md` rather than being guessed.
 
-## 4. Write the docs
+## 4. Hand the confirmed requirements to `docs-writer`
 
-Write to `docs/spec/`. Prose rules: lead with the answer, second person, present tense, concrete values not placeholders, no marketing words. One purpose per file.
+You gather requirements; `docs-writer` writes the prose. Do not write these files yourself.
+
+First, record everything confirmed in the interview to `docs/spec/.requirements.md`: every answer per area, every assumption you made on the user's behalf, and every unresolved question. Write it as notes, not prose - the agent turns it into the pages. It is the only context the agent has, so an answer missing here is an answer lost.
+
+Then invoke the `docs-writer` agent once, with a prompt that:
+
+- Names `docs/spec/.requirements.md` as the source of truth, and states that this is a spec for a project that may not be built yet - the requirements record is what it documents, not existing code.
+- Lists the files to produce, by including the table below and the rule under it verbatim.
+
+One invocation, not one per file: the pages cross-reference each other and must be written together.
+
+When the agent returns, read what it wrote and check it against the interview record - every confirmed decision present, no invented requirement, no placeholder left. Send corrections back to the same agent rather than editing the files yourself. Delete `docs/spec/.requirements.md` once the pages are correct.
 
 | File | Contents |
 |---|---|
@@ -67,7 +78,7 @@ Write to `docs/spec/`. Prose rules: lead with the answer, second person, present
 | `docs/spec/open-questions.md` | Only if the user stopped early. Each item: question, why it matters, what is blocked until it is answered. |
 | `docs/decisions/NNNN-<slug>.md` | One ADR per consequential choice (framework, database, hosting, auth model, anything with a rejected alternative). Sections: Context, Decision, Alternatives considered, Consequences. Numbered from 0001, immutable once merged. |
 
-Do not write a file for an area with nothing to say beyond a heading; fold it into `README.md` with one line explaining why.
+No file is written for an area with nothing to say beyond a heading; it is folded into `README.md` with one line explaining why.
 
 ## 5. Point CLAUDE.md at the spec
 
