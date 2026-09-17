@@ -7,7 +7,6 @@ memory: project
 skills:
   - write-code
   - write-tests
-  - aws-cdk
 color: yellow
 ---
 

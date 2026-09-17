@@ -10,6 +10,7 @@ Shared Claude Code configuration: global instructions, skills, and agents. This 
 | `python/<tool>/` | `<project>/.claude/` | Skills that only make sense in a Python project, one directory per package manager: `uv`, `pip`, `poetry` |
 | `python/agents/` | `<project>/.claude/agents/` | Agents for any Python project, whatever the package manager |
 | `node/npm/` | `<project>/.claude/` | Skills that only make sense in a Node project using `npm` |
+| `infra/` | `<project>/.claude/` | Skills for projects that define cloud infrastructure, whatever the application language |
 
 ## Setup
 
@@ -49,6 +50,16 @@ Copy-Item -Recurse -Force python\agents <project>\.claude\
 cp -r python/agents <project>/.claude/
 ```
 
+Projects that define cloud infrastructure also get the `infra/` skills:
+
+```powershell
+Copy-Item -Recurse -Force infra\skills <project>\.claude\
+```
+
+```sh
+cp -r infra/skills <project>/.claude/
+```
+
 ## What is in `home/`
 
 ### `CLAUDE.md`
@@ -62,7 +73,6 @@ Global rules for every session: no em dashes, no agent co-author lines, favour q
 | `concise` | Loaded automatically by `CLAUDE.md` | Rules for every reply: lead with the answer, gloss jargon on first use, keep task reports to a paragraph plus bullets, and make every `AskUserQuestion` option concrete and tweakable. |
 | `write-code` | Loaded automatically by `CLAUDE.md` before any code is written | Coding standards in six steps: find existing code and the right file location first, DRY with judgement, readable names and small functions, abstractions only with two real uses, validate at the boundary and test every behaviour, then lint, re-read the diff, and ask `simplifier` when the diff outgrows the problem. |
 | `write-tests` | Loaded before writing or editing any test; preloaded by `test-writer` | Test standards for any language: find the runner and existing fixtures first, one behaviour per test, assertions that can actually fail, names that state the expected result, mocking only at boundaries, no sleeps or ordering between tests, and a failing test left in place when it exposes a real bug. |
-| `aws-cdk` | Loaded before touching CDK code; preloaded by `code-reviewer` | Conventions for AWS CDK in TypeScript: stack layout and props over globals, L2 constructs over `Cfn*`, generated physical names, grant methods over wildcard IAM, `RemovalPolicy.RETAIN` on stateful resources, and the `tsc` / `cdk synth` / `cdk diff` / `assertions` loop that has to pass. Never deploys or destroys on its own. |
 | `init-project` | `/init-project <one-line description>` (user only) | Requirements interview in five rounds (product, architecture, design, stack, infrastructure), then writes `docs/spec/*.md`, ADRs under `docs/decisions/`, and a `## Project spec` section in the project `CLAUDE.md` so future sessions find the spec. Never writes code. |
 
 ### Agents
@@ -71,7 +81,7 @@ All agents are read-only except `docs-writer`. Claude picks them from their desc
 
 | Agent | Model | What it does |
 |---|---|---|
-| `code-reviewer` | opus | Reviews the uncommitted diff against `origin/main`. Reports BLOCKER / SHOULD-FIX / NIT as `file:line - problem - fix`, or `LGTM`. Keeps per-project memory of recurring issues. Preloads the `write-code`, `write-tests`, and `aws-cdk` skills. Judges tests in the diff against `write-tests`, plus the diff-only checks: behaviour changed with no test, assertions loosened instead of updated, new branches left uncovered, tests deleted while their behaviour stayed. |
+| `code-reviewer` | opus | Reviews the uncommitted diff against `origin/main`. Reports BLOCKER / SHOULD-FIX / NIT as `file:line - problem - fix`, or `LGTM`. Keeps per-project memory of recurring issues. Preloads the `write-code` and `write-tests` skills. Judges tests in the diff against `write-tests`, plus the diff-only checks: behaviour changed with no test, assertions loosened instead of updated, new branches left uncovered, tests deleted while their behaviour stayed. |
 | `security-reviewer` | opus | Audits the diff for authz gaps, injection, leaked secrets, over-broad IAM, risky dependencies. Reports only what the diff introduces, ordered by severity. |
 | `simplifier` | sonnet | Finds code the diff added that can be deleted or inlined: single-use wrappers, impossible guards, orphans, tests that cannot fail. Only proposes changes that reduce line count. |
 | `docs-writer` | sonnet | The only agent that edits files, and only `README.md` and `docs/`. Keeps `docs/spec/` current, writes how-tos, explanations, and ADRs. Runs every snippet before writing it. |
@@ -104,18 +114,26 @@ The Python variants run `pip-audit` for vulnerabilities, installed into the envi
 |---|---|---|
 | `test-writer` | opus | Writes pytest unit tests for new or untested code, editing only the test directory. Picks the runner from the lockfile (`uv run pytest`, `poetry run pytest`, or plain `pytest`), reuses existing `conftest.py` fixtures, and adds the pytest specifics (`pytest.raises`, `parametrize`, `monkeypatch`, `tmp_path`) on top of the shared rules. Preloads `write-code` and `write-tests`. |
 
+## What is in `infra/`
+
+Skills for projects that define cloud infrastructure. Copy `infra/skills` into `<project>/.claude/` only when the repo has infrastructure code; they are not global.
+
+| Skill | Invoke | What it does |
+|---|---|---|
+| `aws-cdk` | Loaded before touching CDK code | Conventions for AWS CDK in TypeScript: stack layout and props over globals, L2 constructs over `Cfn*`, generated physical names, grant methods over wildcard IAM, `RemovalPolicy.RETAIN` on stateful resources, and the `tsc` / `cdk synth` / `cdk diff` / `assertions` loop that has to pass. Never deploys or destroys on its own. |
+
 ## Greenfield project
 
 1. Create the repo and `cd` into it.
 2. Run `/init-project <one-line description>`. Answer the interview; say "you decide" for anything you do not care about and it is recorded in `docs/spec/assumptions.md`. Stop early if you must; unresolved items go to `docs/spec/open-questions.md`.
 3. Confirm the final summary. The skill writes `docs/spec/`, `docs/decisions/`, and a `CLAUDE.md` pointing at them, then asks whether to commit.
-4. Copy the language skills for your package manager into the project, for example `cp -r python/uv/skills <project>/.claude/`, plus `python/agents` for a Python project (see Setup).
+4. Copy the language skills for your package manager into the project, for example `cp -r python/uv/skills <project>/.claude/`, plus `python/agents` for a Python project (see Setup). Add `cp -r infra/skills <project>/.claude/` if the project defines cloud infrastructure.
 5. Build from the spec. When a design changes, update the spec file in the same commit; `docs-writer` can do this.
 
 ## Brownfield project
 
 1. `cd` into the existing repo. If it already has a `CLAUDE.md`, keep it; `init-project` only adds or replaces the `## Project spec` section.
 2. Run `/init-project <one-line description>`. It reads the README, manifests, entry points, and data models first and only asks about what the code does not answer. Where the code and your answer disagree, it reports the gap rather than papering over it.
-3. Copy the language skills and agents into the project as in the greenfield steps, choosing the variant that matches what the repo already uses (`uv.lock`, `requirements.txt`, `poetry.lock`, or `package-lock.json`).
+3. Copy the language skills and agents into the project as in the greenfield steps, choosing the variant that matches what the repo already uses (`uv.lock`, `requirements.txt`, `poetry.lock`, or `package-lock.json`). Add the `infra/` skills if the repo already has CDK code.
 4. Run `/deps audit` for a first picture of outdated or vulnerable dependencies. Plan majors separately; do security fixes first.
 5. Before the first non-trivial change, ask for the `code-reviewer` and `security-reviewer` agents on the diff so their project memory starts with the repo's existing conventions.
