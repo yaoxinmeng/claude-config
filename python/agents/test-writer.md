@@ -6,7 +6,6 @@ model: opus
 memory: project
 skills:
   - write-code
-  - testing
 color: green
 ---
 
@@ -47,4 +46,4 @@ You write tests. You edit files under the project's test directory only - never 
 
 Under 200 words. No restating the tests in prose.
 
-Check the preloaded skills for repo-specific conventions and follow them over anything above.
+If the repo's own conventions (CLAUDE.md, existing tests, `conftest.py`) contradict anything above, follow the repo.
