@@ -110,13 +110,14 @@ Every variant refuses versions released less than 7 days ago, so a hijacked rele
 
 The Python variants run `pip-audit` for vulnerabilities, installed into the environment as a tool and never added as a dependency. The npm variant uses the built-in `npm audit`.
 
-Every variant asks `docs-researcher` for the API at a resolved version and for breaking changes before an upgrade. That agent lives in `home/`, so a project that only got the skills copied in does not have it; each skill says to do the lookup by hand and report that it did, rather than answering from memory. The `aws-cdk` skill depends on it the same way.
+Every variant asks `docs-researcher` for the API at a resolved version and for breaking changes before an upgrade. That agent lives in `home/`, so a project that only got the skills copied in does not have it; each skill says to do the lookup by hand and report that it did, rather than answering from memory. The `aws-cdk` skill depends on it the same way, and `review` depends on `code-reviewer`, `security-reviewer`, and `simplifier`.
 
-`python/skills/` holds one skill that applies to any Python project, whatever the package manager:
+`python/skills/` holds the skills that apply to any Python project, whatever the package manager:
 
 | Skill | Invoke | What it does |
 |---|---|---|
 | `write-tests-python` | Loaded before writing or editing any Python test; preloaded by `test-writer` | The pytest layer on top of `write-tests`: pick the runner from the lockfile (`uv run pytest`, `poetry run pytest`, or plain `pytest`), read `[tool.pytest.ini_options]` for markers and plugins, never add a plugin to make a test possible, reuse every `conftest.py` on the path, and the idioms - `pytest.raises(..., match=...)` over bare `Exception`, `parametrize` with `ids=`, `monkeypatch` and `tmp_path` at boundaries, fixtures that return rather than assert. |
+| `review` | `/review [base branch]` (user only) | Pre-merge review of the diff against `origin/main`. Runs the repo's own checks first (lint, format, types, fast and slow tests, dead code), preferring a task the repo already defines and naming every check it skipped. Then dispatches `code-reviewer`, `security-reviewer`, and `simplifier` in parallel and merges their findings into one deduplicated BLOCKER / SHOULD-FIX / CONSIDER list, ending with whether the branch is mergeable. Reports only; never fixes unless asked. |
 
 ### Agents
 
@@ -146,4 +147,4 @@ Skills for projects that define cloud infrastructure. Copy `infra/skills` into `
 2. Run `/init-project <one-line description>`. It reads the README, manifests, entry points, and data models first and only asks about what the code does not answer. Where the code and your answer disagree, it reports the gap rather than papering over it.
 3. Copy the language skills and agents into the project as in the greenfield steps, choosing the variant that matches what the repo already uses (`uv.lock`, `requirements.txt`, `poetry.lock`, or `package-lock.json`). Add the `infra/` skills if the repo already has CDK code.
 4. Run `/deps audit` for a first picture of outdated or vulnerable dependencies. Plan majors separately; do security fixes first.
-5. Before the first non-trivial change, ask for the `code-reviewer` and `security-reviewer` agents on the diff so their project memory starts with the repo's existing conventions.
+5. Before the first non-trivial change, ask for the `code-reviewer` and `security-reviewer` agents on the diff so their project memory starts with the repo's existing conventions. In a Python project, `/review` does this and runs the repo's checks in the same pass.
