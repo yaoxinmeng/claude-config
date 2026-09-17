@@ -39,7 +39,7 @@ Sections 1-5 are the standard. They are also the criteria to judge existing code
 - Validate at the boundary (input parsing, external calls), trust inside. No defensive checks on values the type system already guarantees.
 - Fail loudly with a specific error; never swallow exceptions or return sentinel values that callers can forget to check.
 - No hard-coded secrets, paths, or environment-specific values; read them from config.
-- Every new behaviour gets a test in the project's existing test layout, covering the happy path and the failure the code guards against. Load the `write-tests` skill before writing them.
+- Every new behaviour gets a test in the project's existing test layout, covering the happy path and the failure the code guards against.
 
 ## 6. Finish
 
