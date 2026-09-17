@@ -14,6 +14,7 @@
   If you see one, even if it is not caused by what you are working on right now, still get it fixed.
 - Load the `concise` skill before writing any user-facing reply or asking the user a question. Its rules on length, plain language, and option design apply to all output.
 - Load the `write-code` skill before writing, editing, or generating any code. It sets the bar for reuse, naming, abstractions, file placement, and the cleanup pass.
+- Load the `write-tests` skill before writing or editing any test. It sets what deserves a test, how assertions must be able to fail, and where mocking stops.
 - Before using "dynamic workflows", "ultra code" or any harness feature that immediately spawns a large swarm of subagents, always explain the tradeoffs and ask the user for explicit approval.
 
 ## Maintaining this file

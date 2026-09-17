@@ -53,7 +53,7 @@ cp -r python/agents <project>/.claude/
 
 ### `CLAUDE.md`
 
-Global rules for every session: no em dashes, no agent co-author lines, favour quality over development cost, reproduce bugs end-to-end before fixing, fix any lint or test failure you see, load the `concise` skill before replying, and load the `write-code` skill before writing code.
+Global rules for every session: no em dashes, no agent co-author lines, favour quality over development cost, reproduce bugs end-to-end before fixing, fix any lint or test failure you see, load the `concise` skill before replying, load the `write-code` skill before writing code, and load the `write-tests` skill before writing tests.
 
 ### Skills
 
@@ -61,6 +61,7 @@ Global rules for every session: no em dashes, no agent co-author lines, favour q
 |---|---|---|
 | `concise` | Loaded automatically by `CLAUDE.md` | Rules for every reply: lead with the answer, gloss jargon on first use, keep task reports to a paragraph plus bullets, and make every `AskUserQuestion` option concrete and tweakable. |
 | `write-code` | Loaded automatically by `CLAUDE.md` before any code is written | Coding standards in six steps: find existing code and the right file location first, DRY with judgement, readable names and small functions, abstractions only with two real uses, validate at the boundary and test every behaviour, then lint, re-read the diff, and ask `simplifier` when the diff outgrows the problem. |
+| `write-tests` | Loaded before writing or editing any test; preloaded by `test-writer` | Test standards for any language: find the runner and existing fixtures first, one behaviour per test, assertions that can actually fail, names that state the expected result, mocking only at boundaries, no sleeps or ordering between tests, and a failing test left in place when it exposes a real bug. |
 | `aws-cdk` | Loaded before touching CDK code; preloaded by `code-reviewer` | Conventions for AWS CDK in TypeScript: stack layout and props over globals, L2 constructs over `Cfn*`, generated physical names, grant methods over wildcard IAM, `RemovalPolicy.RETAIN` on stateful resources, and the `tsc` / `cdk synth` / `cdk diff` / `assertions` loop that has to pass. Never deploys or destroys on its own. |
 | `init-project` | `/init-project <one-line description>` (user only) | Requirements interview in five rounds (product, architecture, design, stack, infrastructure), then writes `docs/spec/*.md`, ADRs under `docs/decisions/`, and a `## Project spec` section in the project `CLAUDE.md` so future sessions find the spec. Never writes code. |
 
@@ -70,7 +71,7 @@ All agents are read-only except `docs-writer`. Claude picks them from their desc
 
 | Agent | Model | What it does |
 |---|---|---|
-| `code-reviewer` | opus | Reviews the uncommitted diff against `origin/main`. Reports BLOCKER / SHOULD-FIX / NIT as `file:line - problem - fix`, or `LGTM`. Keeps per-project memory of recurring issues. Preloads the `write-code` and `aws-cdk` skills. Reviews tests in the diff against built-in criteria: assertions that can fail, mocking only at boundaries, public interface only, edge cases covered, no loosened assertions. |
+| `code-reviewer` | opus | Reviews the uncommitted diff against `origin/main`. Reports BLOCKER / SHOULD-FIX / NIT as `file:line - problem - fix`, or `LGTM`. Keeps per-project memory of recurring issues. Preloads the `write-code`, `write-tests`, and `aws-cdk` skills. Judges tests in the diff against `write-tests`, plus the diff-only checks: behaviour changed with no test, assertions loosened instead of updated, new branches left uncovered, tests deleted while their behaviour stayed. |
 | `security-reviewer` | opus | Audits the diff for authz gaps, injection, leaked secrets, over-broad IAM, risky dependencies. Reports only what the diff introduces, ordered by severity. |
 | `simplifier` | sonnet | Finds code the diff added that can be deleted or inlined: single-use wrappers, impossible guards, orphans, tests that cannot fail. Only proposes changes that reduce line count. |
 | `docs-writer` | sonnet | The only agent that edits files, and only `README.md` and `docs/`. Keeps `docs/spec/` current, writes how-tos, explanations, and ADRs. Runs every snippet before writing it. |
@@ -101,7 +102,7 @@ The Python variants run `pip-audit` for vulnerabilities, installed into the envi
 
 | Agent | Model | What it does |
 |---|---|---|
-| `test-writer` | opus | Writes pytest unit tests for new or untested code, editing only the test directory. Picks the runner from the lockfile (`uv run pytest`, `poetry run pytest`, or plain `pytest`), reuses existing `conftest.py` fixtures, tests through the public interface only, mocks only at boundaries, and leaves a failing test in place when it finds a bug rather than weakening the assertion. Preloads `write-code`. |
+| `test-writer` | opus | Writes pytest unit tests for new or untested code, editing only the test directory. Picks the runner from the lockfile (`uv run pytest`, `poetry run pytest`, or plain `pytest`), reuses existing `conftest.py` fixtures, and adds the pytest specifics (`pytest.raises`, `parametrize`, `monkeypatch`, `tmp_path`) on top of the shared rules. Preloads `write-code` and `write-tests`. |
 
 ## Greenfield project
 

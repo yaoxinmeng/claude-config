@@ -6,6 +6,7 @@ model: opus
 memory: project
 skills:
   - write-code
+  - write-tests
   - aws-cdk
 color: yellow
 ---
@@ -40,13 +41,11 @@ If nothing qualifies, reply `LGTM` and stop. No praise, no summary of what the d
 
 ## Tests in the diff
 
+Judge every test against the `write-tests` skill and flag violations. On top of that, check what only a diff shows:
+
 - Behaviour changed but no test changed
-- Behaviour is asserted, not just execution: no test whose only assertion is `assert result is not None`, a bare smoke call, or a snapshot nobody reads
-- The test can fail: mocks don't stand in for the code under test, and the assertion depends on the changed logic
-- Mocking stops at the boundary (network, clock, filesystem, third-party SDK); internal collaborators are used for real
-- Tests go through the public interface, not private helpers or internal state
-- Edge cases the diff introduces are covered: error paths, empty and boundary inputs, and any new branch
 - A test changed alongside the behaviour it guards was loosened rather than updated - flag the weakened assertion
-- No shared mutable state or ordering dependency between tests
+- Edge cases the diff introduces are uncovered: new error paths, new branches, new boundary inputs
+- A test deleted without the behaviour it covered being deleted too
 
 Check the preloaded skills for repo-specific conventions and treat violations as SHOULD-FIX.
