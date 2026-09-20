@@ -99,3 +99,5 @@ Do not restate spec content in `CLAUDE.md` - it would drift. Point, don't copy.
 ## 6. Finish
 
 Report in under fifteen lines: files written, number of ADRs, number of assumptions, number of open questions, and whether `CLAUDE.md` was created or updated. Then ask one question: whether to commit `docs/` and `CLAUDE.md` now. Do not commit without a yes.
+
+End by telling the user to run `/init-claude-configs` next. It reads `docs/spec/stack.md` and `docs/spec/design.md` and generates the project's `.claude/` skills and agents for that stack, so the first coding session starts with the right runner, layout, and checks instead of guessing them.
