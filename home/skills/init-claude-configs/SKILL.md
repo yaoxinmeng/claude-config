@@ -1,6 +1,6 @@
 ---
 name: init-claude-configs
-description: Generate a project's `.claude/` config - `coding`, `testing`, and `review` skills plus `coder`, `test-writer`, and `code-reviewer` agents - written for this project's language, framework, dependencies, and toolchain. Reads the codebase first, interviews the user for what the code cannot answer, and verifies every command before writing it down. Use when a project has no `.claude/skills/`, when starting a greenfield project, or when the stack changed and the config has drifted.
+description: Generate a project's `.claude/` config - `coding`, `testing`, `review`, and `deps` skills, `coder`, `test-writer`, and `code-reviewer` agents, and `settings.json` permissions - written for this project's language, framework, dependencies, and toolchain. Reads the codebase first, interviews the user for what the code cannot answer, and verifies every command before writing it down. Use when a project has no `.claude/skills/`, when starting a greenfield project, or when the stack changed and the config has drifted.
 disable-model-invocation: true
 argument-hint: "[directory to scope to, defaults to the repo root]"
 ---
@@ -66,7 +66,7 @@ Write these seven files from the templates under `references/`. Each template st
 | `.claude/skills/coding/SKILL.md` | `references/coding.md` | Stack, layout, idioms, checks - loaded before any code is written |
 | `.claude/skills/testing/SKILL.md` | `references/testing.md` | Runner, config, layout, fixtures, framework idioms - loaded before any test is written |
 | `.claude/skills/review/SKILL.md` | `references/review.md` | `/review`: runs the checks, dispatches the reviewer agents, merges findings |
-| `.claude/skills/deps/SKILL.md` | `references/deps.md` | `/deps add | audit | upgrade`: dependency changes through the package manager, with release-age and vulnerability checks |
+| `.claude/skills/deps/SKILL.md` | `references/deps.md` | `/deps add`, `/deps audit`, `/deps upgrade`: dependency changes through the package manager, with release-age and vulnerability checks |
 | `.claude/agents/coder.md` | `references/coder.md` | Implements a scoped change; preloads `write-code`, `write-tests`, `coding`, `testing` |
 | `.claude/agents/test-writer.md` | `references/test-writer.md` | Writes tests only; preloads `write-tests` and `testing` |
 | `.claude/agents/code-reviewer.md` | `references/code-reviewer.md` | The global reviewer, preloading `coding` and `testing` so it judges idiom by this stack |
@@ -81,7 +81,13 @@ Rules that apply to every file:
 - A repo with several components (a monorepo, a backend plus a frontend) gets one subsection per component inside each skill, not one skill per component. The agents are shared.
 - When updating an existing file, keep any section the user wrote that the fact sheet does not contradict, and say what you changed.
 
-## 5. Point CLAUDE.md at the skills
+## 5. Set permissions
+
+Write `.claude/settings.json` from `references/settings.md`, merging into whatever the file already holds. The rules it sets: read and edit anything under the project, run the verified check commands and the runner prefix without a prompt, run `git` branch, checkout, add, and commit without a prompt, ask before `git push`, and never read `.env` files or private keys. Every `Bash(...)` allow row must come from a command verified in step 3; a prefix rule allows everything that starts with it, so an unverified one is a guess about what is safe.
+
+Validate the JSON after writing. A malformed settings file disables every setting in it without an error.
+
+## 6. Point CLAUDE.md at the skills
 
 Skills only trigger reliably when the project says to load them. Create or update the project's `CLAUDE.md` (repo root) with a `## Project skills` section, leaving every other section untouched, that says in under six lines:
 
@@ -92,6 +98,6 @@ Skills only trigger reliably when the project says to load them. Create or updat
 
 Point, don't copy: nothing from the skills is restated here.
 
-## 6. Finish
+## 7. Finish
 
-Report in under twelve lines: files written or updated, the commands verified, the commands marked unverified, the facts the user decided, and whether `CLAUDE.md` was created or updated. Then ask one question: whether to commit `.claude/` and `CLAUDE.md` now. Do not commit without a yes.
+Report in under twelve lines: files written or updated, the commands verified, the commands marked unverified, the permission rules added to `.claude/settings.json`, the facts the user decided, and whether `CLAUDE.md` was created or updated. Then ask one question: whether to commit `.claude/` and `CLAUDE.md` now. Do not commit without a yes.
