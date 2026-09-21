@@ -18,6 +18,7 @@ First check for `docs/spec/README.md`. If it is missing, stop and tell the user 
 Build a stack fact sheet from the repo so you only ask about what the code cannot answer. Look at:
 
 - Manifests and lockfiles: `pyproject.toml`, `package.json`, `go.mod`, `Cargo.toml`, `*.csproj`, `Gemfile`, `pom.xml`, `build.gradle*`, and their locks. The lockfile decides the package manager and the runner prefix (`uv run`, `poetry run`, `npm run`, `pnpm`, `cargo`, `go`).
+- Doc generators already in the dev dependencies or task runner (`pdoc`, `sphinx` with `autodoc`, `mkdocstrings`, `typedoc`, `cargo doc`, `godoc`/`gomarkdoc`, `dotnet docfx`), and whether `docs/reference/` already exists and what wrote it.
 - Tool config: lint, format, and type-check sections or files (`ruff`, `eslint`, `biome`, `prettier`, `mypy`/`pyright`, `tsconfig`, `golangci`, `clippy`), `.editorconfig`, `pre-commit` config.
 - Task runners: `Makefile`, `justfile`, `package.json` scripts, `[tool.poe]`, `nox`/`tox`, `Taskfile`. A task the repo defines is the definition of "the checks pass here"; prefer it over calling tools one by one.
 - CI workflows: which checks run on a pull request, in what order, with what flags.
@@ -54,6 +55,7 @@ A command written into a skill is a promise that it works here. Before writing a
 
 - Run it with the runner prefix from the fact sheet. Record the exact command that succeeded, or that failed for a real reason (a lint error in the repo is a real reason; "command not found" is not - that tool is not configured and does not go in the table).
 - Prefer the repo's own task over the raw tool: `make check`, `npm run lint`, `uv run poe test`. Name the raw tool in a note if a reader will need it.
+- The reference-doc generator from step 5 is a check command like any other: run it, confirm it writes into `docs/reference/`, and record the exact command and roughly how long it took - step 5 needs the timing. If it writes somewhere else, point its output at `docs/reference/` in its own config file, not with a shell move. If it needs a container, a database, or a running server that is not already up, do not start one: mark the command unverified, record what it needs, and tell the user.
 - Never install a tool to make a command work. Report the gap instead; the user decides.
 - Greenfield: there is nothing to run yet. Write the commands the chosen tools document for a default install and mark the table `Unverified - remove this line after the first session runs every row`. The first coding session removes the marker.
 
@@ -81,9 +83,26 @@ Rules that apply to every file:
 - A repo with several components (a monorepo, a backend plus a frontend) gets one subsection per component inside each skill, not one skill per component. The agents are shared.
 - When updating an existing file, keep any section the user wrote that the fact sheet does not contradict, and say what you changed.
 
-## 5. Set permissions
+## 5. Set permissions and the reference-docs hook
 
 Write `.claude/settings.json` from `references/settings.md`, merging into whatever the file already holds. The rules it sets: read and edit anything under the project, run the verified check commands and the runner prefix without a prompt, run `git` branch, checkout, add, and commit without a prompt, ask before `git push`, and never read `.env` files or private keys. Every `Bash(...)` allow row must come from a command verified in step 3; a prefix rule allows everything that starts with it, so an unverified one is a guess about what is safe.
+
+The deny and ask rows make the project's own rules binding rather than remembered: dependency changes go through `/deps` and not a direct installer call, generated files are not hand-edited, a landed migration prompts before it is touched. Each of those rows is a claim about this repo - confirm it from the fact sheet before writing it, and drop the row when the claim is false. Prefer a permission rule over a hook wherever the permission system can express the rule: it is enforced before the tool runs and no script can fail open.
+
+Add the format-on-write hook from `references/settings.md` whenever step 3 verified a formatter. It is the one hook worth having in nearly every project - it costs milliseconds on the file just written and keeps formatting churn out of the diff. Pipe-test it before writing it, as the template describes; a formatter that silently no-ops is worse than none, because the Checks table stops catching what it was supposed to catch.
+
+`docs/reference/` is generated API reference - the global `write-docs` skill forbids hand-writing it, so something has to write it. Two preconditions apply to either hook below, and failing one means no hook at all:
+
+- The project has a public API surface worth a reference: a library, an SDK, an HTTP API with a schema, a CLI, or a database schema other code is written against. A leaf application nobody imports does not get one.
+- A generator is already a dependency or a task-runner target here. Never add one to make the hook possible; offer it as a follow-up instead, and say so in the report.
+
+Then classify the generator by what it costs to run, because that decides which hook it gets. Run it once yourself to find out rather than guessing from its name - `openapi.json` is cheap when the app exposes a schema-dump entry point and expensive when the only way to get it is to boot the server.
+
+**Cheap** - static analysis of the source, offline, no service to start, finishes in a couple of seconds: `pdoc`, `typedoc`, `mkdocstrings`, `cargo doc`, an OpenAPI dump from an in-process app object, a CLI `--help` render. These get the regenerating `Stop` hook from `references/settings.md`.
+
+**Expensive** - needs a container, a database, a running server, a migration run, or the network: `pg_dump` of a schema built by migrations, an OpenAPI or GraphQL schema scraped from a booted server, a client generated from a live endpoint. These do not go in a generating hook - a turn that edits one line should not start Postgres, and a hook that leaves containers behind on a failed turn is worse than a stale file. They get the staleness-warning `Stop` hook instead: it compares mtimes, costs nothing, and tells the session the artifact is behind its source. Record the real command in the `coding` skill's Checks table as an on-demand step, and name it in the warning text so the reader knows what to run.
+
+When the same repo has both kinds, each generator gets its own entry under `Stop` - one regenerating, one warning. Say in the report which generator landed in which tier and why.
 
 Validate the JSON after writing. A malformed settings file disables every setting in it without an error.
 
@@ -95,9 +114,10 @@ Skills only trigger reliably when the project says to load them. Create or updat
 - Load the `testing` skill before writing or editing any test, after the global `write-tests`.
 - `/review` runs the repo's checks and the reviewer agents; run it before asking for a merge.
 - `/deps` is the only way dependencies change; never hand-edit the manifest or lockfile.
+- `docs/reference/` is generated, never hand-edited: name the hook in `.claude/settings.json` that regenerates it, and for an expensive generator name the command a session has to run when the hook warns the artifact is stale. Omit this line when no hook was written.
 
 Point, don't copy: nothing from the skills is restated here.
 
 ## 7. Finish
 
-Report in under twelve lines: files written or updated, the commands verified, the commands marked unverified, the permission rules added to `.claude/settings.json`, the facts the user decided, and whether `CLAUDE.md` was created or updated. Then ask one question: whether to commit `.claude/` and `CLAUDE.md` now. Do not commit without a yes.
+Report in under twelve lines: files written or updated, the commands verified, the commands marked unverified, the permission rules and hooks added to `.claude/settings.json` (and any deny row you dropped because the claim behind it was false), the facts the user decided, and whether `CLAUDE.md` was created or updated. Then ask one question: whether to commit `.claude/` and `CLAUDE.md` now. Do not commit without a yes.
