@@ -1,6 +1,6 @@
 ---
 name: init-claude-configs
-description: Generate a project's `.claude/` config - `coding`, `testing`, `review`, and `deps` skills, `coder`, `test-writer`, and `code-reviewer` agents, and `settings.json` permissions - written for this project's language, framework, dependencies, and toolchain. Reads the codebase first, interviews the user for what the code cannot answer, and verifies every command before writing it down. Use when a project has no `.claude/skills/`, when starting a greenfield project, or when the stack changed and the config has drifted.
+description: Generate a project's `.claude/` config - `coding`, `testing`, `review`, and `deps` skills, `coder` and `test-writer` agents, and `settings.json` permissions and hooks - written for this project's language, framework, dependencies, and toolchain. Reads the codebase first, interviews the user for what the code cannot answer, and verifies every command before writing it down. Use when a project has no `.claude/skills/`, when starting a greenfield project, or when the stack changed and the config has drifted.
 disable-model-invocation: true
 argument-hint: "[directory to scope to, defaults to the repo root]"
 ---
@@ -61,7 +61,7 @@ A command written into a skill is a promise that it works here. Before writing a
 
 ## 4. Write the files
 
-Write these seven files from the templates under `references/`. Each template states what goes in each section and the rules for filling it; read the template before writing the file.
+Write these six files from the templates under `references/`. Each template states what goes in each section and the rules for filling it; read the template before writing the file.
 
 | File | Template | Purpose |
 |---|---|---|
@@ -71,7 +71,6 @@ Write these seven files from the templates under `references/`. Each template st
 | `.claude/skills/deps/SKILL.md` | `references/deps.md` | `/deps add`, `/deps audit`, `/deps upgrade`: dependency changes through the package manager, with release-age and vulnerability checks |
 | `.claude/agents/coder.md` | `references/coder.md` | Implements a scoped change; preloads `write-code`, `write-tests`, `coding`, `testing` |
 | `.claude/agents/test-writer.md` | `references/test-writer.md` | Writes tests only; preloads `write-tests` and `testing` |
-| `.claude/agents/code-reviewer.md` | `references/code-reviewer.md` | The global reviewer, preloading `coding` and `testing` so it judges idiom by this stack |
 
 Rules that apply to every file:
 
@@ -82,6 +81,7 @@ Rules that apply to every file:
 - The frontmatter `description` says when to load the skill, in one or two sentences, and names the language and framework so the skill triggers on them.
 - A repo with several components (a monorepo, a backend plus a frontend) gets one subsection per component inside each skill, not one skill per component. The agents are shared.
 - When updating an existing file, keep any section the user wrote that the fact sheet does not contradict, and say what you changed.
+- No project `code-reviewer` is generated. The global one (`~/.claude/agents/code-reviewer.md`) loads `coding` and `testing` itself when the project has them, so a per-repo copy would only be a second set of review criteria to keep in sync. If that agent is missing, say so in the report: `/review` depends on it, as it does on `security-reviewer` and `simplifier` from the same place.
 
 ## 5. Set permissions and the reference-docs hook
 
@@ -120,4 +120,4 @@ Point, don't copy: nothing from the skills is restated here.
 
 ## 7. Finish
 
-Report in under twelve lines: files written or updated, the commands verified, the commands marked unverified, the permission rules and hooks added to `.claude/settings.json` (and any deny row you dropped because the claim behind it was false), the facts the user decided, and whether `CLAUDE.md` was created or updated. Then ask one question: whether to commit `.claude/` and `CLAUDE.md` now. Do not commit without a yes.
+Report in under twelve lines: files written or updated, the commands verified, the commands marked unverified, the permission rules and hooks added to `.claude/settings.json` (and any deny row you dropped because the claim behind it was false), the facts the user decided, and whether `CLAUDE.md` was created or updated. Say in one line that the new skills and agents are only discovered when a session starts, so this session cannot load them - the user needs a restart before `coding`, `testing`, `/review`, or `/deps` resolve. Then ask one question: whether to commit `.claude/` and `CLAUDE.md` now. Do not commit without a yes.

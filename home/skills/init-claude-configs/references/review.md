@@ -31,13 +31,13 @@ Report failures as a short list. Do not fix anything yet.
 
 Dispatch all three in one message so they run in parallel:
 
-- `code-reviewer` - correctness, conventions, missing tests. This repo's copy preloads the `coding` and `testing` skills, so it judges idiom by this stack.
+- `code-reviewer` - correctness, conventions, missing tests. It loads this repo's `coding` and `testing` skills itself, so it judges idiom by this stack.
 - `security-reviewer` - authz, injection, secrets, <tenant scoping / any repo-specific concern from the fact sheet>
 - `simplifier` - what can be deleted
 
 Give each the base branch in its prompt. Do not summarize the diff for them; they read it themselves.
 
-`security-reviewer` and `simplifier` ship with the global config (`~/.claude/agents/`), not with this repo. If either is unavailable, do that pass yourself against the same criteria, and say which agent you stood in for - the findings still have to be produced.
+`code-reviewer`, `security-reviewer`, and `simplifier` all ship with the global config (`~/.claude/agents/`), not with this repo. If any is unavailable, do that pass yourself against the same criteria, and say which agent you stood in for - the findings still have to be produced.
 
 ## 4. Merge
 
