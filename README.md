@@ -54,7 +54,7 @@ The generated project skills layer on these: `coding` on `write-code`, `testing`
 | `write-tests` | Loaded before writing or editing any test; preloaded by `test-writer` | Test standards for any language: find the runner and existing fixtures first, one behaviour per test, assertions that can actually fail, names that state the expected result, mocking only at boundaries, no sleeps or ordering between tests, and a failing test left in place when it exposes a real bug. |
 | `write-docs` | Loaded automatically by `CLAUDE.md` before any documentation is written; preloaded by `docs-writer` | House style for prose docs: lead with the answer, second person and present tense, every claim concrete, say why rather than what, no marketing words, own the caveats. Defines one purpose per page type (`docs/spec/`, `docs/how-to/`, `docs/explanation/`, `docs/decisions/`, `README.md`) and the never list: no documenting private functions, no hand-editing generated `docs/reference/`, no TODOs left in a page. |
 | `init-project` | `/init-project <one-line description>` (user only) | Requirements interview in five rounds (product, architecture, design, stack, infrastructure), then writes `docs/spec/*.md`, ADRs under `docs/decisions/`, and a `## Project spec` section in the project `CLAUDE.md` so future sessions find the spec, then points to `/init-claude-configs`. Never writes code. |
-| `init-claude-configs` | `/init-claude-configs [directory]` (user only) | Generates the project's `.claude/` for its own stack. Reads manifests, lockfiles, tool config, CI, tests, and representative source into a fact sheet; interviews for what the code cannot answer (everything, on a greenfield repo); runs every check command before writing it down; then writes the `coding`, `testing`, `review`, and `deps` skills and the `coder` and `test-writer` agents from the templates in `references/`, a `.claude/settings.json` that allows edits and verified check commands in the project, allows `git` branch/checkout/commit, asks before `git push`, denies reading `.env` files and private keys, denies hand-edits to lockfiles and generated files, and carries a format-on-write hook plus a `docs/reference/` regeneration or staleness hook where the stack supports one, plus a `## Project skills` section in the project `CLAUDE.md`. Refuses to start without `docs/spec/` and points to `/init-project`. Re-run it when the stack changes. |
+| `init-claude-configs` | `/init-claude-configs [directory]` (user only) | Generates the project's `.claude/` for its own stack. Reads manifests, lockfiles, tool config, CI, tests, and representative source into a fact sheet; interviews for what the code cannot answer (everything, on a greenfield repo); runs every check command before writing it down; then writes the `coding`, `testing`, `review`, and `deps` skills and the `coder` and `test-writer` agents from the templates in `references/`, a `.claude/settings.json` that allows edits and verified check commands in the project, allows `git` branch/checkout/commit, asks before `git push`, denies reading `.env` files and private keys, denies hand-edits to lockfiles and generated files, and carries a format-on-write hook, a `SessionStart` hook that reports copied files that have drifted from `~/.claude/`, plus a `docs/reference/` regeneration or staleness hook where the stack supports one, plus a `## Project skills` section in the project `CLAUDE.md`. Refuses to start without `docs/spec/` and points to `/init-project`. Re-run it when the stack changes. |
 
 ### Agents
 
@@ -70,7 +70,7 @@ All agents are read-only except `docs-writer`. Claude picks them from their desc
 
 ## What `/init-claude-configs` generates
 
-Seven files plus `settings.json` under `<project>/.claude/`, each written for the project's language, framework, and toolchain. A rule that would be true in any repo is left to the global skills; these hold only what is specific to this one, each convention with the file that shows it.
+Six files plus `settings.json` under `<project>/.claude/`, each written for the project's language, framework, and toolchain. A rule that would be true in any repo is left to `write-code` and `write-tests`; these hold only what is specific to this one, each convention with the file that shows it.
 
 | File | Invoke | What it holds |
 |---|---|---|
@@ -83,7 +83,18 @@ Seven files plus `settings.json` under `<project>/.claude/`, each written for th
 
 On a greenfield repo the checks table is marked unverified until the first coding session has run every row.
 
-`docs-researcher` lives in `home/`, so a project on a machine without the global config does not have it; the generated `deps` and the `aws-cdk` skill say to do the lookup by hand and report that they did, rather than answering from memory. The generated `review` depends on `code-reviewer`, `security-reviewer`, and `simplifier` from the same place.
+It also copies the six files from `home/` that the generated config depends on into the project, so the project does not need this repo installed on the machine using it, and so every rule a session loads is visible in the repo:
+
+| Copied to | Needed by |
+|---|---|
+| `skills/write-code/SKILL.md` | `coder`, and every session before it writes code |
+| `skills/write-tests/SKILL.md` | `coder`, `test-writer` |
+| `agents/code-reviewer.md`, `agents/security-reviewer.md`, `agents/simplifier.md` | `/review` |
+| `agents/docs-researcher.md` | `/deps upgrade` |
+
+A copy never loads alongside the original - Claude Code picks one. Which one differs by kind: for skills, `~/.claude/` wins, so on a machine with this repo installed the copied `write-code` and `write-tests` never load; for agents, the project wins, so the copied reviewer agents are what runs everywhere, including here. A stale copied agent quietly replaces the one in `home/`, which is why the drift check exists.
+
+Each copy carries a provenance line naming its source and the date, `.claude/settings.json` denies edits to it and carries a `SessionStart` hook that reports any copy that has drifted from `~/.claude/` (silent on a machine that has no `~/.claude/` to compare against), and re-running `/init-claude-configs` diffs each copy against the current source and asks before overwriting a hand-edit. Fix a problem with one of these in `home/` and re-run the skill; never edit the copy. The `aws-cdk` skill also uses `docs-researcher` and says to do the lookup by hand when it is not there, rather than answering from memory.
 
 ## What is in `infra/`
 

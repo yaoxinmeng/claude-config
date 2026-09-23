@@ -37,7 +37,7 @@ Dispatch all three in one message so they run in parallel:
 
 Give each the base branch in its prompt. Do not summarize the diff for them; they read it themselves.
 
-`code-reviewer`, `security-reviewer`, and `simplifier` all ship with the global config (`~/.claude/agents/`), not with this repo. If any is unavailable, do that pass yourself against the same criteria, and say which agent you stood in for - the findings still have to be produced.
+`code-reviewer`, `security-reviewer`, and `simplifier` live in this repo under `.claude/agents/`, copied there from the global config so this skill works on any machine. They are copies: fix a problem with one in the source repo and re-run `/init-claude-configs`, not by editing it here. If any is missing, do that pass yourself against the same criteria, and say which agent you stood in for - the findings still have to be produced.
 
 ## 4. Merge
 

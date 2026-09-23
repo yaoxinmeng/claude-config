@@ -18,7 +18,7 @@ All changes go through <`uv`> so <`pyproject.toml` and `uv.lock`> stay consisten
 
 ## Looking things up
 
-The steps below ask the `docs-researcher` agent for the API at a resolved version and for breaking changes before an upgrade. That agent ships with the global config (`~/.claude/agents/`). If it is not available here, do the lookup yourself from the package's official docs and release notes, and say in your report that you did - never skip the lookup and never answer from memory.
+The steps below ask the `docs-researcher` agent for the API at a resolved version and for breaking changes before an upgrade. It lives in this repo under `.claude/agents/`, copied there from the global config so this skill works on any machine. If it is missing, do the lookup yourself from the package's official docs and release notes, and say in your report that you did - never skip the lookup and never answer from memory.
 
 ## Release age
 

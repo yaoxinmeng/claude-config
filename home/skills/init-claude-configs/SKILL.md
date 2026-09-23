@@ -1,6 +1,6 @@
 ---
 name: init-claude-configs
-description: Generate a project's `.claude/` config - `coding`, `testing`, `review`, and `deps` skills, `coder` and `test-writer` agents, and `settings.json` permissions and hooks - written for this project's language, framework, dependencies, and toolchain. Reads the codebase first, interviews the user for what the code cannot answer, and verifies every command before writing it down. Use when a project has no `.claude/skills/`, when starting a greenfield project, or when the stack changed and the config has drifted.
+description: Generate a project's `.claude/` config - `coding`, `testing`, `review`, and `deps` skills, `coder` and `test-writer` agents, and `settings.json` permissions and hooks - written for this project's language, framework, dependencies, and toolchain, plus copies of the global skills and agents that config depends on so the project also works on a machine without the global config. Reads the codebase first, interviews the user for what the code cannot answer, and verifies every command before writing it down. Use when a project has no `.claude/skills/`, when starting a greenfield project, or when the stack changed and the config has drifted.
 disable-model-invocation: true
 argument-hint: "[directory to scope to, defaults to the repo root]"
 ---
@@ -81,7 +81,28 @@ Rules that apply to every file:
 - The frontmatter `description` says when to load the skill, in one or two sentences, and names the language and framework so the skill triggers on them.
 - A repo with several components (a monorepo, a backend plus a frontend) gets one subsection per component inside each skill, not one skill per component. The agents are shared.
 - When updating an existing file, keep any section the user wrote that the fact sheet does not contradict, and say what you changed.
-- No project `code-reviewer` is generated. The global one (`~/.claude/agents/code-reviewer.md`) loads `coding` and `testing` itself when the project has them, so a per-repo copy would only be a second set of review criteria to keep in sync. If that agent is missing, say so in the report: `/review` depends on it, as it does on `security-reviewer` and `simplifier` from the same place.
+- The generated files name `write-code`, `write-tests`, `code-reviewer`, `security-reviewer`, `simplifier`, and `docs-researcher`. Those live in the global config, so the next subsection copies them into the project rather than leaving the references to resolve against a home directory the next collaborator may not have.
+
+### Vendor the global dependencies
+
+A project whose `.claude/` points at `~/.claude/` only works on a machine that has this user's global config. Copy the six files the generated config depends on into the project so it stands on its own, and so every rule a session loads is visible in the repo:
+
+| Copy from | Copy to | Needed by |
+|---|---|---|
+| `~/.claude/skills/write-code/SKILL.md` | `.claude/skills/write-code/SKILL.md` | `coder`, and `CLAUDE.md` before any code is written |
+| `~/.claude/skills/write-tests/SKILL.md` | `.claude/skills/write-tests/SKILL.md` | `coder`, `test-writer` |
+| `~/.claude/agents/code-reviewer.md` | `.claude/agents/code-reviewer.md` | `/review` |
+| `~/.claude/agents/security-reviewer.md` | `.claude/agents/security-reviewer.md` | `/review` |
+| `~/.claude/agents/simplifier.md` | `.claude/agents/simplifier.md` | `/review` |
+| `~/.claude/agents/docs-researcher.md` | `.claude/agents/docs-researcher.md` | `/deps upgrade` |
+
+Rules:
+
+- Copy verbatim, with `cp`. Step 5 denies the file-writing tools on these paths, so `cp` is also how a later run refreshes one. These are not the place for project specifics - that is what `coding` and `testing` are for. A project copy that has drifted from its source is a second set of standards to keep in sync.
+- Add a provenance line to each copy and nothing else: exactly one line, immediately after the closing `---` of the frontmatter, with no blank line around it. The drift hook in step 5 strips that one line before comparing, so an extra blank line makes every copy report as stale. Insert it in the same shell step as the copy (`sed`/`awk`), for the same reason the copy uses `cp`. The form: "> Copied from the global config (`<source path>`) on `<date>`. Do not edit here - edit the source and re-run `/init-claude-configs`."
+- A source file that is missing on this machine is not copied and not invented. Say so in the report, name what breaks without it, and leave the reference in place.
+- Nothing loads twice when both exist, but which one wins differs by kind, and the two rules point opposite ways: for a skill, `~/.claude/` wins over the project, so on a machine with the global config the copies of `write-code` and `write-tests` never load; for an agent, the project wins over `~/.claude/`, so the copied `code-reviewer`, `security-reviewer`, `simplifier`, and `docs-researcher` are the ones that run, there and everywhere else. A stale copied agent therefore silently replaces the source on the author's own machine. That is what the drift hook and the diff below are for.
+- On a re-run, diff each copy against its current source before touching it. When they differ, say which files changed and whether the change came from the source or from a hand-edit in the project, and ask before overwriting a hand-edit. Never overwrite silently.
 
 ## 5. Set permissions and the reference-docs hook
 
@@ -108,10 +129,11 @@ Validate the JSON after writing. A malformed settings file disables every settin
 
 ## 6. Point CLAUDE.md at the skills
 
-Skills only trigger reliably when the project says to load them. Create or update the project's `CLAUDE.md` (repo root) with a `## Project skills` section, leaving every other section untouched, that says in under six lines:
+Skills only trigger reliably when the project says to load them. Create or update the project's `CLAUDE.md` (repo root) with a `## Project skills` section, leaving every other section untouched, that says in under seven lines:
 
-- Load the `coding` skill before writing or editing any code in this repo, after the global `write-code`.
-- Load the `testing` skill before writing or editing any test, after the global `write-tests`.
+- Load the `coding` skill before writing or editing any code in this repo, after `write-code`.
+- Load the `testing` skill before writing or editing any test, after `write-tests`.
+- `write-code`, `write-tests`, and the agents under `.claude/agents/` other than `coder` and `test-writer` are copies of the shared config, carried here so the repo works on any machine: never edit them here. Name where they came from, from the provenance line in the copies. Omit this line when nothing was copied.
 - `/review` runs the repo's checks and the reviewer agents; run it before asking for a merge.
 - `/deps` is the only way dependencies change; never hand-edit the manifest or lockfile.
 - `docs/reference/` is generated, never hand-edited: name the hook in `.claude/settings.json` that regenerates it, and for an expensive generator name the command a session has to run when the hook warns the artifact is stale. Omit this line when no hook was written.
@@ -120,4 +142,4 @@ Point, don't copy: nothing from the skills is restated here.
 
 ## 7. Finish
 
-Report in under twelve lines: files written or updated, the commands verified, the commands marked unverified, the permission rules and hooks added to `.claude/settings.json` (and any deny row you dropped because the claim behind it was false), the facts the user decided, and whether `CLAUDE.md` was created or updated. Say in one line that the new skills and agents are only discovered when a session starts, so this session cannot load them - the user needs a restart before `coding`, `testing`, `/review`, or `/deps` resolve. Then ask one question: whether to commit `.claude/` and `CLAUDE.md` now. Do not commit without a yes.
+Report in under fourteen lines: files written or updated, the files copied from the global config (and any that were missing, with what breaks without them, and any copy whose overwrite the user declined), the commands verified, the commands marked unverified, the permission rules and hooks added to `.claude/settings.json` (and any deny row you dropped because the claim behind it was false), the facts the user decided, and whether `CLAUDE.md` was created or updated. Say in one line that the new skills and agents are only discovered when a session starts, so this session cannot load them - the user needs a restart before `coding`, `testing`, `/review`, or `/deps` resolve. Then ask one question: whether to commit `.claude/` and `CLAUDE.md` now. Do not commit without a yes.

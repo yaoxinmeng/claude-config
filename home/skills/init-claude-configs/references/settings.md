@@ -34,7 +34,13 @@ Project permissions, committed so every session and every teammate starts with t
       "Bash(<installer> install *)",
       "Bash(<installer> add *)",
       "Edit(CHANGELOG.md)",
-      "Edit(docs/reference/**)"
+      "Edit(docs/reference/**)",
+      "Edit(.claude/skills/write-code/**)",
+      "Edit(.claude/skills/write-tests/**)",
+      "Edit(.claude/agents/code-reviewer.md)",
+      "Edit(.claude/agents/security-reviewer.md)",
+      "Edit(.claude/agents/simplifier.md)",
+      "Edit(.claude/agents/docs-researcher.md)"
     ]
   }
 }
@@ -49,6 +55,7 @@ What each block does and how to fill it:
 - The remaining deny rows make rules the project already states actually binding, so nothing depends on a session remembering them:
   - `<lockfile>` and `<installer>` come from the fact sheet (`uv.lock` + `uv`, `package-lock.json` + `npm`, `Cargo.lock` + `cargo`). They route every dependency change through `/deps`, which resolves versions and checks release age and advisories. List each installer subcommand that writes the manifest - `install`, `add`, `remove`, `uninstall` - not a bare `Bash(<installer> *)` prefix, which would also block reads and running scripts.
   - `CHANGELOG.md` and `docs/reference/**` are generated. Deny them only where that is true here: a hand-maintained changelog is a normal file and must stay editable. Check before adding the row.
+  - The `write-code`, `write-tests`, and reviewer-agent rows are the files copied from the global config. They are maintained in the source repo, so an edit here is drift by definition. Write one row per file actually copied and drop the rest - a deny for a file that is not there is a claim about this repo that is false. The rows do not block a refresh: `/init-claude-configs` replaces a copy with `cp`, and the deny covers the file-writing tools.
   - `Edit(<migrations dir>/**)` goes in `ask`, not `deny`: a landed migration is immutable, but writing a new one is ordinary work, and `ask` gets the pause without blocking it. Drop the row when the project has no migrations.
 - A deny is a permission rule, not a hook. Anything the permission system can express belongs here - it is enforced before the tool runs, needs no shell, and cannot be defeated by a failing script.
 - If the repo already has `.claude/settings.local.json`, leave it alone; it is the developer's personal overrides and is gitignored.
@@ -84,6 +91,40 @@ How to fill it:
 - `|| true` keeps a formatter failure from surfacing as a tool error. A file the formatter rejects is a syntax error the session is about to see anyway.
 - Pipe-test the command before writing it, with a real file from this repo: `echo '{"tool_input":{"file_path":"<a real source file>"}}' | <command>`. Check the file was actually reformatted, not just that the command exited 0.
 - The formatter prefix needs its `Bash(...)` row in `permissions.allow`.
+
+## The copied-files drift hook
+
+Add this whenever step 4 copied any file from the global config. It compares each copy against its source once per session start and names the ones that have drifted:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for f in <copied paths>; do p=\"$CLAUDE_PROJECT_DIR/.claude/$f\"; s=\"$HOME/.claude/$f\"; [ -f \"$p\" ] && [ -f \"$s\" ] || continue; grep -v '^> Copied from the global config' \"$p\" | diff -q - \"$s\" >/dev/null || echo \"Stale copy: .claude/$f differs from ~/.claude/$f. Re-run /init-claude-configs to refresh it; fix the source, not the copy.\"; done; exit 0",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+How to fill it and why it is shaped this way:
+
+- `<copied paths>` is the space-separated list of the files step 4 actually copied, each relative to `.claude/` - `skills/write-code/SKILL.md agents/code-reviewer.md`. The same relative path holds under `~/.claude/`, which is what lets one loop cover both. Drop the hook when nothing was copied.
+- `SessionStart` stdout is added to the session's context, so a drifted copy is something the session knows about before it loads anything. Silence is the no-drift case: the loop prints nothing and costs one `diff` per file.
+- The `grep -v` strips the provenance line the copies carry, which is the one intended difference. It strips one line, so the copy must carry exactly one and no blank line with it, as step 4 says. Get that wrong and the hook reports every file as stale on a clean project - test the silent case before you trust the noisy one.
+- Both `-f` tests matter. On a collaborator's machine `$HOME/.claude/` has no source to compare against, and the hook stays quiet rather than warning about something they cannot fix - it is a check for whoever maintains the source repo.
+- `matcher: "startup"` only. On `clear` and `compact` the same warning would be re-added to context mid-task, where nobody is going to act on it.
+- `exit 2` from a `SessionStart` hook blocks the session from starting, so the command ends in `exit 0`: drift is worth saying, never worth refusing to work over. The `|| continue` and the trailing `exit 0` also keep a missing file from ending the loop early.
+- Hooks do not go through the permission system, so this needs no `permissions.allow` row.
+- Test it before writing it, with `CLAUDE_PROJECT_DIR` set to the project root: once as-is, which must print nothing, and once after appending a line to one copy, which must name that one file. Undo the edit afterwards.
 
 ## The reference-docs hook
 
