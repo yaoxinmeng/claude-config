@@ -26,7 +26,7 @@ Build a stack fact sheet from the repo so you only ask about what the code canno
 - Source: the entry points, the directory layout (where models, handlers, services, config, migrations live), and three representative modules for idiom - error types, logging, validation, async usage, how the framework is wired.
 - Frameworks and key dependencies from imports, not from the manifest alone: a listed dependency nobody imports is not a convention.
 - `docs/spec/stack.md` and `docs/spec/design.md`, and the existing `CLAUDE.md`.
-- Existing `.claude/skills/` and `.claude/agents/`. If `coding`, `testing`, `review`, or `deps` already exist, read them; you will update in place, not overwrite blind.
+- Existing `.claude/skills/` and `.claude/agents/`. Read every one of the six files this skill writes - `coding`, `testing`, `review`, `deps`, `coder`, `test-writer` - that already exists, in full, before you write anything: you update them in place and you cannot keep what you have not read. Record in the fact sheet, per file, which sections are already there and which look hand-written rather than generated from the template (a section the template has no slot for, a convention with no evidence line, prose in someone else's voice).
 
 Record the fact sheet in the scratchpad directory (not the repo) with one row per fact and its source (`file:line` or "interview"). Summarize it to the user in under fifteen lines and name every fact still missing.
 
@@ -80,7 +80,9 @@ Rules that apply to every file:
 - Every convention names its evidence when the source is the code (`see src/api/errors.py`), so a future session can check whether it still holds.
 - The frontmatter `description` says when to load the skill, in one or two sentences, and names the language and framework so the skill triggers on them.
 - A repo with several components (a monorepo, a backend plus a frontend) gets one subsection per component inside each skill, not one skill per component. The agents are shared.
-- When updating an existing file, keep any section the user wrote that the fact sheet does not contradict, and say what you changed.
+- When updating an existing file, keep every section the user wrote that the fact sheet does not contradict, and say what you changed.
+- Never drop or rewrite a hand-written section without asking. When the fact sheet contradicts one - the framework it describes is gone, the command in it no longer exists - show the section and the replacement side by side, say which fact overrides it and where that fact came from, and ask before writing. One question can cover several sections in one file. This is the same rule the copied files follow in the next subsection, and a re-run after a stack change is exactly when it earns its place: the skill is refreshing the file precisely because the facts moved, and that is the moment someone's convention disappears unnoticed.
+- A section the template generated and the fact sheet still supports is refreshed without asking. Only hand-written content is worth a question.
 - The generated files name `write-code`, `write-tests`, `code-reviewer`, `security-reviewer`, `simplifier`, and `docs-researcher`. Those live in the global config, so the next subsection copies them into the project rather than leaving the references to resolve against a home directory the next collaborator may not have.
 
 ### Vendor the global dependencies
@@ -142,4 +144,4 @@ Point, don't copy: nothing from the skills is restated here.
 
 ## 7. Finish
 
-Report in under fourteen lines: files written or updated, the files copied from the global config (and any that were missing, with what breaks without them, and any copy whose overwrite the user declined), the commands verified, the commands marked unverified, the permission rules and hooks added to `.claude/settings.json` (and any deny row you dropped because the claim behind it was false), the facts the user decided, and whether `CLAUDE.md` was created or updated. Say in one line that the new skills and agents are only discovered when a session starts, so this session cannot load them - the user needs a restart before `coding`, `testing`, `/review`, or `/deps` resolve. Then ask one question: whether to commit `.claude/` and `CLAUDE.md` now. Do not commit without a yes.
+Report in under fourteen lines: files written or updated, each with the hand-written sections you kept, replaced after asking, or were told to leave alone, the files copied from the global config (and any that were missing, with what breaks without them, and any copy whose overwrite the user declined), the commands verified, the commands marked unverified, the permission rules and hooks added to `.claude/settings.json` (and any deny row you dropped because the claim behind it was false), the facts the user decided, and whether `CLAUDE.md` was created or updated. Say in one line that the new skills and agents are only discovered when a session starts, so this session cannot load them - the user needs a restart before `coding`, `testing`, `/review`, or `/deps` resolve. Then ask one question: whether to commit `.claude/` and `CLAUDE.md` now. Do not commit without a yes.
