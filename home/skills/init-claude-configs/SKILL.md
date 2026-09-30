@@ -114,6 +114,8 @@ The deny and ask rows make the project's own rules binding rather than remembere
 
 Add the format-on-write hook from `references/settings.md` whenever step 3 verified a formatter. It is the one hook worth having in nearly every project - it costs milliseconds on the file just written and keeps formatting churn out of the diff. Pipe-test it before writing it, as the template describes; a formatter that silently no-ops is worse than none, because the Checks table stops catching what it was supposed to catch.
 
+Add the no-op `cd` hook from `references/settings.md` to every project. Sessions tend to open commands with `cd <project dir> &&`, and that compound form slips past every `Bash(...)` allow row above, so the user is prompted for commands the rules already allow. The hook refuses the redundant `cd` and the session reruns without it. Pipe-test it as the template describes.
+
 `docs/reference/` is generated API reference - the global `write-docs` skill forbids hand-writing it, so something has to write it. Two preconditions apply to either hook below, and failing one means no hook at all:
 
 - The project has a public API surface worth a reference: a library, an SDK, an HTTP API with a schema, a CLI, or a database schema other code is written against. A leaf application nobody imports does not get one.
@@ -131,11 +133,12 @@ Validate the JSON after writing. A malformed settings file disables every settin
 
 ## 6. Point CLAUDE.md at the skills
 
-Skills only trigger reliably when the project says to load them. Create or update the project's `CLAUDE.md` (repo root) with a `## Project skills` section, leaving every other section untouched, that says in under seven lines:
+Skills only trigger reliably when the project says to load them. Create or update the project's `CLAUDE.md` (repo root) with a `## Project skills` section, leaving every other section untouched, that says in under eight lines:
 
 - Load the `coding` skill before writing or editing any code in this repo, after `write-code`.
 - Load the `testing` skill before writing or editing any test, after `write-tests`.
 - `write-code`, `write-tests`, and the agents under `.claude/agents/` other than `coder` and `test-writer` are copies of the shared config, carried here so the repo works on any machine: never edit them here. Name where they came from, from the provenance line in the copies. Omit this line when nothing was copied.
+- Shell commands already start in the repo root: never prefix them with `cd` to it. Use paths relative to the root instead.
 - `/review` runs the repo's checks and the reviewer agents; run it before asking for a merge.
 - `/deps` is the only way dependencies change; never hand-edit the manifest or lockfile.
 - `docs/reference/` is generated, never hand-edited: name the hook in `.claude/settings.json` that regenerates it, and for an expensive generator name the command a session has to run when the hook warns the artifact is stale. Omit this line when no hook was written.

@@ -92,6 +92,38 @@ How to fill it:
 - Pipe-test the command before writing it, with a real file from this repo: `echo '{"tool_input":{"file_path":"<a real source file>"}}' | <command>`. Check the file was actually reformatted, not just that the command exited 0.
 - The formatter prefix needs its `Bash(...)` row in `permissions.allow`.
 
+## The no-op `cd` hook
+
+Add this to every project. Sessions habitually open a command with `cd <project dir> &&` even though the shell already starts there. The `cd` adds nothing, but it turns the command into a compound one, which no `Bash(<prefix> *)` allow row matches, so the user gets a prompt for a command the rules already allow. This hook refuses a leading `cd` into the directory the shell is already in, and tells the session to drop it:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.cwd, .tool_input.command' | tr -d '\\r' | { read -r cwd; read -r cmd; d=$(printf '%s' \"$cmd\" | sed -nE \"s/^[[:space:]]*(cd|Set-Location|pushd)[[:space:]]+(\\\"([^\\\"]*)\\\"|'([^']*)'|([^[:space:];&|]+))[[:space:]]*(&&|;|\\$).*/\\3\\4\\5/p\"); here=$(cd -- \"$cwd\" 2>/dev/null && pwd -P); [ -n \"$d\" ] && [ -n \"$here\" ] && [ \"$(cd -- \"$here\" && cd -- \"$d\" 2>/dev/null && pwd -P)\" = \"$here\" ] && { echo \"The shell is already in $cwd. Drop the leading cd and run the rest of the command as is.\" >&2; exit 2; }; exit 0; }",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Why it is shaped this way:
+
+- It compares against the hook input's `cwd`, not `$CLAUDE_PROJECT_DIR`. The shell's directory persists between calls, so after a session has moved into a subdirectory, a `cd` back to the root does real work and must pass. Only a `cd` that lands where the shell already is gets refused.
+- Both sides are resolved with `cd` and `pwd -P`, so `C:\repo`, `C:/repo`, `/c/repo`, `.`, and a symlinked path all compare equal. Matching the path as text would miss most of the spellings a session actually uses.
+- `tr -d '\r'` matters on Windows: jq there ends lines with CRLF, the stray `\r` makes both `cd` calls fail, and two empty strings compare equal - every `cd` would be refused. The `-n "$here"` test is the second guard against the same failure.
+- `exit 2` from `PreToolUse` blocks the call and hands stderr to the session, which reruns the command without the `cd`. A permission rule cannot express "a `cd` to the current directory", which is why this one is a hook.
+- `Set-Location` and `pushd` cover the PowerShell tool on Windows; drop `PowerShell` from the matcher on a project nobody runs on Windows, and keep the rest.
+- Pipe-test it before writing it, with the project root as `cwd`: `jq -nc --arg cwd "$PWD" --arg c "cd \"$PWD\" && git status" '{cwd:$cwd,tool_input:{command:$c}}' | <command>` must exit 2, and the same with `cd <a subdirectory> && ls` and with a plain `git status` must exit 0. Build the input with `jq -n` rather than by hand - a Windows path in hand-written JSON is an invalid escape, jq fails, and the hook passes everything silently.
+
 ## The copied-files drift hook
 
 Add this whenever step 4 copied any file from the global config. It compares each copy against its source once per session start and names the ones that have drifted:
