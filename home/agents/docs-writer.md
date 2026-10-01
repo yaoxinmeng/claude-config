@@ -1,6 +1,6 @@
 ---
 name: docs-writer
-description: Writes and updates human-readable prose documentation - how-to guides, architecture explanations, ADRs, READMEs. Use when a change needs explaining, or when docs have drifted from the code.
+description: Writes and updates human-readable prose documentation - how-to guides, architecture explanations, READMEs. Use when a change needs explaining, or when docs have drifted from the code.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 memory: project

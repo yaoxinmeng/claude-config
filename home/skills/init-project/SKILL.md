@@ -76,7 +76,6 @@ When the agent returns, read what it wrote and check it against the interview re
 | `docs/spec/infrastructure.md` | Hosting, environments, deploy and rollback procedure, CI/CD stages, secrets, observability, backups, cost ceiling, IaC tool. |
 | `docs/spec/assumptions.md` | Every decision made on the user's behalf: `decision · reason · what would change it`. Empty file is fine; missing file is not. |
 | `docs/spec/open-questions.md` | Only if the user stopped early. Each item: question, why it matters, what is blocked until it is answered. |
-| `docs/decisions/NNNN-<slug>.md` | One ADR per consequential choice (framework, database, hosting, auth model, anything with a rejected alternative). Sections: Context, Decision, Alternatives considered, Consequences. Numbered from 0001, immutable once merged. |
 
 No file is written for an area with nothing to say beyond a heading; it is folded into `README.md` with one line explaining why.
 
@@ -90,7 +89,7 @@ Every future session must find the spec without being told. Create or update the
 The section, in under ten lines, says:
 
 - `docs/spec/README.md` is the index; read the spec file for an area before implementing anything in it.
-- Update the spec in the same change as the code when a design changes; add an ADR under `docs/decisions/` for any choice with a rejected alternative.
+- Update the spec in the same change as the code when a design changes. A choice with a rejected alternative is recorded in the spec file for its area, or in `docs/explanation/` once the code exists - there is no separate decision log.
 - Unknowns go to `docs/spec/open-questions.md`, never guessed.
 - A one-line pointer to the stack (`docs/spec/stack.md`) so agents don't pick a framework from memory.
 
@@ -98,6 +97,6 @@ Do not restate spec content in `CLAUDE.md` - it would drift. Point, don't copy.
 
 ## 6. Finish
 
-Report in under fifteen lines: files written, number of ADRs, number of assumptions, number of open questions, and whether `CLAUDE.md` was created or updated. Then ask one question: whether to commit `docs/` and `CLAUDE.md` now. Do not commit without a yes.
+Report in under fifteen lines: files written, number of assumptions, number of open questions, and whether `CLAUDE.md` was created or updated. Then ask one question: whether to commit `docs/` and `CLAUDE.md` now. Do not commit without a yes.
 
 End by telling the user to run `/init-claude-configs` next. It reads `docs/spec/stack.md` and `docs/spec/design.md` and generates the project's `.claude/` skills and agents for that stack, so the first coding session starts with the right runner, layout, and checks instead of guessing them.

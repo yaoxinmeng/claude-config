@@ -1,6 +1,6 @@
 ---
 name: write-docs
-description: Standards for any prose documentation that gets written or changed - how-to guides, architecture explanations, ADRs, specs, READMEs. House style, one purpose per page type, and what never belongs in a doc. Load before writing or editing anything under `docs/` or a README.
+description: Standards for any prose documentation that gets written or changed - how-to guides, architecture explanations, specs, READMEs. House style, one purpose per page type, and what never belongs in a doc. Load before writing or editing anything under `docs/` or a README.
 ---
 
 Write documentation a new teammate could follow. Match the voice, heading depth, and formatting of the pages around the one you are writing before applying anything below.
@@ -24,15 +24,14 @@ Write documentation a new teammate could follow. Match the voice, heading depth,
 - **No filler sections.** No "Introduction" restating the title, no "Conclusion" restating the page, no "Future work" you invented.
 - **Say it once.** Link, or point to `path:line`, instead of repeating something another page already covers.
 - **Describe what is, not what you did.** "The queue retries 3 times", not "I added retries to the queue".
-- **Gloss unfamiliar terms on first use.** Spell out an acronym or internal name the first time it appears: "ADR (architecture decision record)".
+- **Gloss unfamiliar terms on first use.** Spell out an acronym or internal name the first time it appears: "the DLQ (dead-letter queue)".
 - **Table or list over prose** whenever the content is a set of parallel items.
 
 ## 3. Page types (one purpose per page - never mix)
 
 - `docs/spec/*.md` - the requirements the code is built against, one area per file: `product.md`, `architecture.md`, `design.md`, `stack.md`, `infrastructure.md`, `assumptions.md`, `open-questions.md`, plus a `README.md` index. These are written from a requirements record, and kept current afterwards. When a design changes, update the spec file in the same change as the code. Never invent a requirement to fill a gap - add it to `open-questions.md` instead.
 - `docs/how-to/*.md` - a task, start to finish, numbered steps, a stated end state. Title is the task: "Add a database migration".
-- `docs/explanation/*.md` - how a subsystem fits together and why it's shaped that way. No steps. Include a diagram in Mermaid where structure matters. Explains the code as built; the spec says what was asked for. If they disagree, report it, don't reconcile it silently.
-- `docs/decisions/NNNN-*.md` - ADRs, numbered from 0001. Sections: Context, Decision, Alternatives considered, Consequences. Immutable once merged; supersede, never rewrite.
+- `docs/explanation/*.md` - how a subsystem fits together and why it's shaped that way. No steps. Include a diagram in Mermaid where structure matters. Explains the code as built; the spec says what was asked for. If they disagree, report it, don't reconcile it silently. This is also where a consequential choice and its rejected alternatives are recorded, under the subsystem it shaped - there is no separate decision log.
 - `README.md` - what this repo is, how to run it, where to go next. Under 100 lines. Everything else is a link.
 
 ## 4. Never
