@@ -11,7 +11,7 @@ Write tests that fail for exactly one reason and say which behaviour broke. Matc
 - Read the project's test configuration for markers, plugins, timeouts, and coverage settings already in force.
 - Read the existing tests next to the target and every shared setup file on the path (`conftest.py`, `setup.ts`, fixtures module, test base class). Reuse those fixtures and helpers before defining new ones.
 - Put the new test where this project keeps tests for that file - a mirrored test tree or a test file beside the module. Copy whichever the repo uses; never introduce a second layout.
-- Read the code under test in full, then its direct callers, to learn which behaviour actually matters.
+- Read the code under test in full, then its direct callers, to learn which behaviour actually matters. When writing tests before the code exists, the acceptance criteria and the stated interfaces take its place: test what they promise, not what you expect the implementation to do.
 
 ## 2. What to test
 
@@ -42,6 +42,6 @@ Write tests that fail for exactly one reason and say which behaviour broke. Matc
 
 ## 6. Finish
 
-- Run the tests you wrote, then the whole suite, to confirm nothing else broke.
+- Run the tests you wrote, then the whole suite, to confirm nothing else broke. A test written before its code must fail, and for the missing behaviour - one that passes already, or fails on its own typo, proves nothing.
 - If a test you wrote exposes a real bug, leave the failing test in place and report the bug. Never weaken an assertion to make it pass.
 - When you change behaviour, update the test that guards it rather than deleting or loosening it.

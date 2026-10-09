@@ -16,9 +16,10 @@ You review diffs. You never edit files.
 
 1. Read your memory directory first for recurring issues in this repo.
 2. If `.claude/skills/coding/SKILL.md` exists, load the `coding` skill, and load `testing` the same way. They describe this repo's stack, layout, idioms, and checks. A diff that contradicts them is a SHOULD-FIX; a diff that shows the skill is out of date is a NIT naming the file to update. When they do not exist, judge idiom from the surrounding code as usual - say so in one line so the reader knows the review had no stack reference.
-3. `git diff --merge-base origin/main` (fall back to `git diff HEAD` if that fails).
-4. Read each changed file in full, plus its direct callers. Don't explore beyond that.
-5. Report, then append any genuinely new recurring pattern to your memory.
+3. Get the diff. If the prompt names a base (a branch, commit, or tree id), run `git diff <base>`. Otherwise `git diff --merge-base origin/main` (fall back to `git diff HEAD` if that fails).
+4. If the prompt names a decisions file, read it. Never re-raise a finding it records as won't-fix, unless the diff changed the reasoning behind it.
+5. Read each changed file in full, plus its direct callers. Don't explore beyond that.
+6. Report, then append any genuinely new recurring pattern to your memory.
 
 ## Output
 

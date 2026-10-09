@@ -17,10 +17,12 @@ Project permissions, committed so every session and every teammate starts with t
       "Bash(git checkout *)",
       "Bash(git switch *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git write-tree)"
     ],
     "ask": [
       "Bash(git push *)",
+      "Bash(gh pr create *)",
       "Edit(<migrations dir>/**)"
     ],
     "deny": [
@@ -37,6 +39,8 @@ Project permissions, committed so every session and every teammate starts with t
       "Edit(docs/reference/**)",
       "Edit(.claude/skills/write-code/**)",
       "Edit(.claude/skills/write-tests/**)",
+      "Edit(.claude/skills/feature/**)",
+      "Edit(.claude/agents/planner.md)",
       "Edit(.claude/agents/code-reviewer.md)",
       "Edit(.claude/agents/security-reviewer.md)",
       "Edit(.claude/agents/simplifier.md)",
@@ -50,12 +54,12 @@ What each block does and how to fill it:
 
 - `Read(./**)` and `Edit(./**)` cover every file under the project. `Edit(...)` is the rule for all file-writing tools (Write, Edit, NotebookEdit); a `Write(...)` rule is not matched. Deny rules win over allow, so the `.env` entries still block.
 - The `Bash(<...> *)` rows are the commands the Checks table in `coding` and the runner in `testing` use - one row per verified prefix (`uv run`, `npm run`, `make`, `cargo`, `go`, `pytest`). Add nothing that step 3 did not verify; a prefix rule allows every command that starts with it.
-- Git: branch, checkout, switch, add, and commit run without a prompt; status, diff, and log are read-only and appear in nearly every turn. Push goes to `ask` because it publishes; a rule in `ask` prompts even when a broader allow would match.
+- Git: branch, checkout, switch, add, and commit run without a prompt; status, diff, and log are read-only and appear in nearly every turn. `git write-tree` is how `/feature` records what each review round saw, so the next round reviews only the fixes. Push and `gh pr create` go to `ask` because they publish; a rule in `ask` prompts even when a broader allow would match.
 - Deny covers `.env` files at any depth and private keys. Add any other secret file the fact sheet found (`secrets/**`, a cloud credentials file), and say so in the report.
 - The remaining deny rows make rules the project already states actually binding, so nothing depends on a session remembering them:
   - `<lockfile>` and `<installer>` come from the fact sheet (`uv.lock` + `uv`, `package-lock.json` + `npm`, `Cargo.lock` + `cargo`). They route every dependency change through `/deps`, which resolves versions and checks release age and advisories. List each installer subcommand that writes the manifest - `install`, `add`, `remove`, `uninstall` - not a bare `Bash(<installer> *)` prefix, which would also block reads and running scripts.
   - `CHANGELOG.md` and `docs/reference/**` are generated. Deny them only where that is true here: a hand-maintained changelog is a normal file and must stay editable. Check before adding the row.
-  - The `write-code`, `write-tests`, and reviewer-agent rows are the files copied from the global config. They are maintained in the source repo, so an edit here is drift by definition. Write one row per file actually copied and drop the rest - a deny for a file that is not there is a claim about this repo that is false. The rows do not block a refresh: `/init-claude-configs` replaces a copy with `cp`, and the deny covers the file-writing tools.
+  - The `write-code`, `write-tests`, `feature`, `planner`, and reviewer-agent rows are the files copied from the global config. They are maintained in the source repo, so an edit here is drift by definition. Write one row per file actually copied and drop the rest - a deny for a file that is not there is a claim about this repo that is false. The rows do not block a refresh: `/init-claude-configs` replaces a copy with `cp`, and the deny covers the file-writing tools.
   - `Edit(<migrations dir>/**)` goes in `ask`, not `deny`: a landed migration is immutable, but writing a new one is ordinary work, and `ask` gets the pause without blocking it. Drop the row when the project has no migrations.
 - A deny is a permission rule, not a hook. Anything the permission system can express belongs here - it is enforced before the tool runs, needs no shell, and cannot be defeated by a failing script.
 - If the repo already has `.claude/settings.local.json`, leave it alone; it is the developer's personal overrides and is gitignored.

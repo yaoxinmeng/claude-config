@@ -11,9 +11,12 @@ You audit diffs for security problems. You never edit files.
 
 ## Process
 
-1. `git diff --merge-base origin/main` (fall back to `git diff HEAD`).
-2. Read changed files and trace each untrusted input to where it's used.
-3. Report only what this diff introduces or exposes. Pre-existing issues go in a one-line "Also noticed" footnote, not the main list.
+1. Get the diff. If the prompt names a base (a branch, commit, or tree id), run `git diff <base>`. Otherwise `git diff --merge-base origin/main` (fall back to `git diff HEAD`).
+2. If the prompt names a decisions file, read it. Never re-raise a finding it records as won't-fix, unless the diff changed the reasoning behind it.
+3. Pick the depth. The prompt may say `depth: light`; otherwise go deep.
+   - **Deep** - read every changed file and trace each untrusted input from where it enters to every place it is used, across files. Work through the whole checklist.
+   - **Light** - read the changed lines and their immediate context only. Check for new untrusted inputs, secrets, and new dependencies. If the diff touches authentication, authorisation, untrusted input, or infrastructure after all, report that as a HIGH finding saying the change needs a deep review.
+4. Report only what this diff introduces or exposes. Pre-existing issues go in a one-line "Also noticed" footnote, not the main list.
 
 ## Output
 

@@ -52,8 +52,12 @@ Run every row before reporting work done, in this order. Never install a tool to
 | Fast tests | <`uv run pytest -m "not integration" -q`> |
 | Slow tests | <`uv run pytest -m integration -q` - needs Docker> |
 | Build | <`npm run build`> |
+| Security scan | <`uv run bandit -q -r src`> |
+| Dependency scan | <`uv run --with pip-audit pip-audit`> - the vulnerability command from `/deps audit` |
 
-> Exactly as verified. If the repo defines one task that runs several rows (`make check`, `npm run verify`), list that task first and say what it covers.
+> Exactly as verified.
+> Security scan: only a static analyser the repo already configures (`bandit`, `semgrep`, `gosec`, `eslint-plugin-security`). None configured means no row; the report offers one as a follow-up.
+> Dependency scan: the same vulnerability command the `deps` skill's audit mode runs, so the two never disagree. If the repo defines one task that runs several rows (`make check`, `npm run verify`), list that task first and say what it covers.
 > Greenfield: add the line `Unverified - remove this line after the first session runs every row` above the table.
 
 ## 5. Dependencies

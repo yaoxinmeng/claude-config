@@ -83,16 +83,18 @@ Rules that apply to every file:
 - When updating an existing file, keep every section the user wrote that the fact sheet does not contradict, and say what you changed.
 - Never drop or rewrite a hand-written section without asking. When the fact sheet contradicts one - the framework it describes is gone, the command in it no longer exists - show the section and the replacement side by side, say which fact overrides it and where that fact came from, and ask before writing. One question can cover several sections in one file. This is the same rule the copied files follow in the next subsection, and a re-run after a stack change is exactly when it earns its place: the skill is refreshing the file precisely because the facts moved, and that is the moment someone's convention disappears unnoticed.
 - A section the template generated and the fact sheet still supports is refreshed without asking. Only hand-written content is worth a question.
-- The generated files name `write-code`, `write-tests`, `code-reviewer`, `security-reviewer`, `simplifier`, and `docs-researcher`. Those live in the global config, so the next subsection copies them into the project rather than leaving the references to resolve against a home directory the next collaborator may not have.
+- The generated files name `write-code`, `write-tests`, `code-reviewer`, `security-reviewer`, `simplifier`, and `docs-researcher`, and `/feature` drives `planner` and the generated agents. Those live in the global config, so the next subsection copies them into the project rather than leaving the references to resolve against a home directory the next collaborator may not have.
 
 ### Vendor the global dependencies
 
-A project whose `.claude/` points at `~/.claude/` only works on a machine that has this user's global config. Copy the six files the generated config depends on into the project so it stands on its own, and so every rule a session loads is visible in the repo:
+A project whose `.claude/` points at `~/.claude/` only works on a machine that has this user's global config. Copy the eight files the generated config depends on into the project so it stands on its own, and so every rule a session loads is visible in the repo:
 
 | Copy from | Copy to | Needed by |
 |---|---|---|
-| `~/.claude/skills/write-code/SKILL.md` | `.claude/skills/write-code/SKILL.md` | `coder`, and `CLAUDE.md` before any code is written |
+| `~/.claude/skills/write-code/SKILL.md` | `.claude/skills/write-code/SKILL.md` | `coder`, `planner`, and `CLAUDE.md` before any code is written |
 | `~/.claude/skills/write-tests/SKILL.md` | `.claude/skills/write-tests/SKILL.md` | `coder`, `test-writer` |
+| `~/.claude/skills/feature/SKILL.md` | `.claude/skills/feature/SKILL.md` | `/feature` |
+| `~/.claude/agents/planner.md` | `.claude/agents/planner.md` | `/feature` |
 | `~/.claude/agents/code-reviewer.md` | `.claude/agents/code-reviewer.md` | `/review` |
 | `~/.claude/agents/security-reviewer.md` | `.claude/agents/security-reviewer.md` | `/review` |
 | `~/.claude/agents/simplifier.md` | `.claude/agents/simplifier.md` | `/review` |
@@ -103,12 +105,12 @@ Rules:
 - Copy verbatim, with `cp`. Step 5 denies the file-writing tools on these paths, so `cp` is also how a later run refreshes one. These are not the place for project specifics - that is what `coding` and `testing` are for. A project copy that has drifted from its source is a second set of standards to keep in sync.
 - Add a provenance line to each copy and nothing else: exactly one line, immediately after the closing `---` of the frontmatter, with no blank line around it. The drift hook in step 5 strips that one line before comparing, so an extra blank line makes every copy report as stale. Insert it in the same shell step as the copy (`sed`/`awk`), for the same reason the copy uses `cp`. The form: "> Copied from the global config (`<source path>`) on `<date>`. Do not edit here - edit the source and re-run `/init-claude-configs`."
 - A source file that is missing on this machine is not copied and not invented. Say so in the report, name what breaks without it, and leave the reference in place.
-- Nothing loads twice when both exist, but which one wins differs by kind, and the two rules point opposite ways: for a skill, `~/.claude/` wins over the project, so on a machine with the global config the copies of `write-code` and `write-tests` never load; for an agent, the project wins over `~/.claude/`, so the copied `code-reviewer`, `security-reviewer`, `simplifier`, and `docs-researcher` are the ones that run, there and everywhere else. A stale copied agent therefore silently replaces the source on the author's own machine. That is what the drift hook and the diff below are for.
+- Nothing loads twice when both exist, but which one wins differs by kind, and the two rules point opposite ways: for a skill, `~/.claude/` wins over the project, so on a machine with the global config the copies of `write-code`, `write-tests`, and `feature` never load; for an agent, the project wins over `~/.claude/`, so the copied `planner`, `code-reviewer`, `security-reviewer`, `simplifier`, and `docs-researcher` are the ones that run, there and everywhere else. A stale copied agent therefore silently replaces the source on the author's own machine. That is what the drift hook and the diff below are for.
 - On a re-run, diff each copy against its current source before touching it. When they differ, say which files changed and whether the change came from the source or from a hand-edit in the project, and ask before overwriting a hand-edit. Never overwrite silently.
 
 ## 5. Set permissions and the reference-docs hook
 
-Write `.claude/settings.json` from `references/settings.md`, merging into whatever the file already holds. The rules it sets: read and edit anything under the project, run the verified check commands and the runner prefix without a prompt, run `git` branch, checkout, add, and commit without a prompt, ask before `git push`, and never read `.env` files or private keys. Every `Bash(...)` allow row must come from a command verified in step 3; a prefix rule allows everything that starts with it, so an unverified one is a guess about what is safe.
+Write `.claude/settings.json` from `references/settings.md`, merging into whatever the file already holds. The rules it sets: read and edit anything under the project, run the verified check commands and the runner prefix without a prompt, run `git` branch, checkout, add, commit, and write-tree without a prompt, ask before `git push` and `gh pr create`, and never read `.env` files or private keys. Every `Bash(...)` allow row must come from a command verified in step 3; a prefix rule allows everything that starts with it, so an unverified one is a guess about what is safe.
 
 The deny and ask rows make the project's own rules binding rather than remembered: dependency changes go through `/deps` and not a direct installer call, generated files are not hand-edited, a landed migration prompts before it is touched. Each of those rows is a claim about this repo - confirm it from the fact sheet before writing it, and drop the row when the claim is false. Prefer a permission rule over a hook wherever the permission system can express the rule: it is enforced before the tool runs and no script can fail open.
 
@@ -131,14 +133,17 @@ When the same repo has both kinds, each generator gets its own entry under `Stop
 
 Validate the JSON after writing. A malformed settings file disables every setting in it without an error.
 
+Add `.feature/` to the repo's `.gitignore` if `git check-ignore -q .feature/` fails. `/feature` keeps each feature's plan, review findings, and won't-fix decisions there while it works and deletes them when the pull request opens; they are scaffolding for one branch, not a record to commit.
+
 ## 6. Point CLAUDE.md at the skills
 
-Skills only trigger reliably when the project says to load them. Create or update the project's `CLAUDE.md` (repo root) with a `## Project skills` section, leaving every other section untouched, that says in under eight lines:
+Skills only trigger reliably when the project says to load them. Create or update the project's `CLAUDE.md` (repo root) with a `## Project skills` section, leaving every other section untouched, that says in under ten lines:
 
 - Load the `coding` skill before writing or editing any code in this repo, after `write-code`.
 - Load the `testing` skill before writing or editing any test, after `write-tests`.
-- `write-code`, `write-tests`, and the agents under `.claude/agents/` other than `coder` and `test-writer` are copies of the shared config, carried here so the repo works on any machine: never edit them here. Name where they came from, from the provenance line in the copies. Omit this line when nothing was copied.
+- `write-code`, `write-tests`, `feature`, and the agents under `.claude/agents/` other than `coder` and `test-writer` are copies of the shared config, carried here so the repo works on any machine: never edit them here. Name where they came from, from the provenance line in the copies. Omit this line when nothing was copied.
 - Shell commands already start in the repo root: never prefix them with `cd` to it. Use paths relative to the root instead.
+- `/feature <request>` builds a feature as planned, test-first, reviewed steps and ends with a pull request; `.feature/` holds its work files.
 - `/review` runs the repo's checks and the reviewer agents; run it before asking for a merge.
 - `/deps` is the only way dependencies change; never hand-edit the manifest or lockfile.
 - `docs/reference/` is generated, never hand-edited: name the hook in `.claude/settings.json` that regenerates it, and for an expensive generator name the command a session has to run when the hook warns the artifact is stale. Omit this line when no hook was written.
@@ -147,4 +152,4 @@ Point, don't copy: nothing from the skills is restated here.
 
 ## 7. Finish
 
-Report in under fourteen lines: files written or updated, each with the hand-written sections you kept, replaced after asking, or were told to leave alone, the files copied from the global config (and any that were missing, with what breaks without them, and any copy whose overwrite the user declined), the commands verified, the commands marked unverified, the permission rules and hooks added to `.claude/settings.json` (and any deny row you dropped because the claim behind it was false), the facts the user decided, and whether `CLAUDE.md` was created or updated. Say in one line that the new skills and agents are only discovered when a session starts, so this session cannot load them - the user needs a restart before `coding`, `testing`, `/review`, or `/deps` resolve. Then ask one question: whether to commit `.claude/` and `CLAUDE.md` now. Do not commit without a yes.
+Report in under fourteen lines: files written or updated, each with the hand-written sections you kept, replaced after asking, or were told to leave alone, the files copied from the global config (and any that were missing, with what breaks without them, and any copy whose overwrite the user declined), the commands verified, the commands marked unverified, the permission rules and hooks added to `.claude/settings.json` (and any deny row you dropped because the claim behind it was false), the facts the user decided, and whether `CLAUDE.md` was created or updated. Say in one line that the new skills and agents are only discovered when a session starts, so this session cannot load them - the user needs a restart before `coding`, `testing`, `/feature`, `/review`, or `/deps` resolve. Then ask one question: whether to commit `.claude/` and `CLAUDE.md` now. Do not commit without a yes.
